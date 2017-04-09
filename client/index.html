@@ -1,0 +1,120 @@
+<!doctype html>
+<head xmlns="http://www.w3.org/1999/html">
+<title>中国麻将</title>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+<link rel="icon" href="favicon.ico" type="image/x-icon" />
+<link rel="Shortcut Icon" href="favicon.ico" type="image/x-icon" />
+</head>
+    <link rel="stylesheet" type="text/css" href="src/layout.css">    
+<body>
+    <audio id="bgAudio" src="sound/bg.mp3" autoplay="true" playcount="-1" onload="alert('1111111')"> </audio>
+    <!-- <h1>中国麻将</h1> -->
+    <div id="TheDesk">
+        <div id="DeskUp">
+            <div id="DeskLeft">
+                <div id="Front">
+                </div>
+            </div>
+            <div id="DeskCenter">
+                <div id="CenterUp">
+                    <div id="Opposite">
+                    </div>
+                </div>
+                <div id="CenterDown">
+                    <div id="CenterDownL">
+                        <div id="CenterDownL-L">
+                        </div>
+                        <div id="CenterDownL-R">
+                            <div id="FrontOutput">
+                                <div class="FrontOutputLeft">
+                                </div>
+                                <div class="FrontOutputRight">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="CenterDownM">
+                        <div id="CenterDownM-Up">
+                            <div id="OppositeOutput">
+                            </div>
+                        </div>
+                        <div id="CenterDownM-Mid">
+                            
+                        </div>
+                        <div id="CenterDownM-Down">
+                            <div id="SelfOutput">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="CenterDownR">
+                        <div id="CenterDownR-L">
+                             <div id="BackOutput">
+                                <div class="BackOutputLeft">
+                                </div>
+                                <div class="BackOutputRight">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="CenterDownR-R">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="DeskRight">
+                <div id="Back">
+                </div>
+            </div>
+        </div>
+        <div id="DeskDown">
+            <div id="DeskBottom">
+                <div id="Self">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="UIContainer">
+        <div id="UILayer">
+            <div id="UIMain" class="UIElement">
+                <div id="UICardsOperat" class="UIElement">
+                    <div class="Operat PengCards"></div>
+                    <div class="Operat GangCards"></div>
+                    <div class="Operat HuCards"></div>
+                    <div class="Operat PassCards"></div>
+                </div>
+                <div id="UIReady" class="UIElement">
+                    <img class="startBtn" src="./images/start.png">
+                </div>
+                <div id="UIReadyOK">
+                    <p class="readyOKText">已准备!</p>
+                </div>
+            </div>
+            <div id="UILogin">
+                <h1 style="text-align:center; margin-top: 32px; font-size: 30px; color: #fff">查胡麻将</h1>
+                <h2 style="text-align:right; font-size: 16px; color: #fff">真男人系列&#8482 </h2>
+                <input id="nickNameInput" type="email" placeholder="Nick Name" style="border: solid 1px #CCCCCC; border-radius: 4px; width: 100%; padding-top:10px; padding-bottom:10px; margin-bottom: 10px; margin-top: 10px; font-size: 18px;"  maxlength="12">
+                <h2 id="nickErrorText" style="height:0px; position:relative; top:-42px; text-align:center; font-size: 18px; color: #f11; opacity:0">请在此输入昵称</h2>
+                <button id="startButton" type="submit" style="border-radius: 4px; width: 100%; padding: 10px; font-size: 18px; margin-top: 30px;  margin-bottom: 30px; background-color:#ccc">进入</button>
+            </div>
+            <div id="UIPlayerInfo">
+                <p class="playerName frontName"></p>
+                <p class="playerName backName"></p>
+                <p class="playerName oppositeName"></p>
+                <p class="playerName selfName"></p>
+                <div class="flagIcon frontIcon"></div>
+                <div class="flagIcon backIcon"></div>
+                <div class="flagIcon oppositeIcon"></div>
+                <div class="flagIcon selfIcon"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="./socket.io/socket.io.js"></script>
+    <script src="src/jquery-1.8.0.min.js"></script>
+    <script src="src/Net.js"></script>
+    <script src="src/Engine.js"></script>
+    <script src="src/client.js"></script>
+    <script>
+    </script>
+</body>
+</html>

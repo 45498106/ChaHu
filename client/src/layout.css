@@ -1,0 +1,453 @@
+    * {
+        margin: 0;
+        padding: 0;
+        border: 0;
+    }
+    
+    /*-------------------------------------*/
+    #TheDesk {
+        margin : 0 auto;
+        width : 1136px;
+        height : 640px;
+        background-image : url("../images/Back.png");
+        background-repeat : no-repeat;
+        font-size : 0;  /*空格引起inline-block之间有缝隙,加上font-size等于0解决.*/
+        overflow : hidden;
+    }
+    
+    /*-------------------------------------*/
+    #Front {
+        margin-top : 40px; 
+        margin-left : 160px;
+    }
+    
+    #Back {
+        margin-top : 40px; 
+        margin-left : 20px;
+    }
+        
+    #Self {
+            display: block;
+            /*background: #eee;*/
+            margin: 20px 60px;
+            /*border-top : 20px;
+            border-bottom : 20px;
+            border-color : transparent;
+            border-style : solid;*/
+            font-size : 0; 
+    }
+    
+    #Opposite {
+        margin-top: 20px;
+        margin-left : 120px;
+        /* background: #eee; */
+    }
+    /*-------------------------------------*/
+    
+    .cards {
+        display: inline-block;
+        height : 96px;
+        width : 64px;
+        margin : 0px -1px;
+    }
+    
+    .cards-horizontal {
+        display : block;
+        width : 44px;
+        height : 39px;
+        margin-top : -12px;
+    }
+    
+    .cards-small {
+        display: inline-block;
+        height : 54px;
+        width : 36px;
+        background-repeat : no-repeat;
+        margin : 0px;
+        /*float : left;*/
+    }
+    
+    .fullScale {
+        height : 100%;
+        width : 100%;
+    }
+    
+    .cards-hover {
+        vertical-align:top;
+    } 
+    
+    .cards-hover:hover  , .cards-hover-ie{
+        margin-top: -15px;
+    }
+    
+    /*-------------------------------------*/
+    #DeskUp {
+        width : 100%;
+        height : 76%;
+    }
+    
+    #DeskDown {
+        width : 100%;
+        height : 24%;
+    }
+    /*-------------------------------------*/
+    
+    #DeskLeft {
+        display: inline-block;
+        /* background: #f00; */
+        width : 20%;
+        height : 100%;
+        overflow : hidden;
+    }
+    #DeskCenter {
+        display: inline-block;
+        /* background: #0f0; */
+        width : 60%;
+        height : 100%;
+        overflow : hidden;
+    }
+    
+    #DeskRight {
+        display: inline-block;
+        /* background: #00f; */
+        width : 20%;
+        height : 100%;
+        overflow : hidden;
+    }
+    
+    #DeskBottom {
+        /* background: #f0f; */
+        height : 100%;
+        width : 100%;
+        overflow : hidden;
+    }
+    /*-------------------------------------*/
+    
+    #CenterUp {
+        height : 20%;
+        /* background: #f0f; */
+        overflow : hidden;
+    }
+    
+    #CenterDown {
+        height : 80%;
+        /* background: #0ff; */
+        overflow : hidden;
+    }
+    
+    #CenterDownL {
+        display: inline-block;
+        width : 17%;
+        height : 100%;
+        /* background: #fff; */
+        overflow : hidden;
+    }
+    
+    #CenterDownL-L {
+        display: inline-block;
+        width : 26%;
+        height : 100%;
+        /* background: #f00; */
+        overflow : hidden;
+    }
+    #CenterDownL-R {
+        display: inline-block;
+        width : 74%;
+        height : 100%;
+        /* background: #00f; */
+        overflow : hidden;
+    }
+    
+    #CenterDownM {
+        display: inline-block;
+        width : 66%;
+        height : 100%;
+        /* background: #0ff; */
+        overflow : hidden;
+    }
+    
+    #CenterDownM-Up {
+        width : 100%;
+        height : 30%;
+        /* background: #00f; */
+        overflow : hidden;
+    }
+    
+    #CenterDownM-Mid {
+        width : 100%;
+        height : 40%;
+        /* background: #0ff; */
+        overflow : hidden;
+    }
+    
+    #CenterDownM-Down {
+        width : 100%;
+        height : 30%;
+        /* background: #ff0; */
+        overflow : hidden;
+    }
+    
+    #CenterDownR {
+        display: inline-block;
+        width : 17%;
+        height : 100%;
+        /* background: #0f0; */
+        overflow : hidden;
+    }
+    
+    #CenterDownR-L {
+        display: inline-block;
+        width : 74%;
+        height : 100%;
+        /* background: #0f0; */
+        overflow : hidden;
+    }
+    
+    #CenterDownR-R {
+        display: inline-block;
+        width : 26%;
+        height : 100%;
+        /* background: #00f; */
+        overflow : hidden;
+    }
+    
+    /*-------------------------------------*/
+    
+    #FrontOutput {
+        /*margin-left : 100px; */
+        width : 100%;
+        height : 100%;
+    }
+    
+    .FrontOutputLeft {
+        margin-top : 20px; 
+        display: inline-block;
+        width : 50%;
+        vertical-align:top;
+    }
+    
+    .FrontOutputRight {
+        margin-top : 20px; 
+        display: inline-block;
+        width : 50%;
+        vertical-align:top;
+    }
+    
+    #BackOutput {
+        width : 100%;
+        height : 100%;
+    }
+    
+    .BackOutputLeft {
+        margin-top : 20px;
+        display: inline-block;
+        width : 50%;
+        vertical-align:top;
+    }
+    
+    .BackOutputRight {
+        margin-top : 20px;
+        display: inline-block;
+        width : 50%;
+        vertical-align:top;
+    }
+    
+    #SelfOutput {
+        margin-top : 2px; 
+        margin-left : 10px;
+    }
+    
+    #OppositeOutput {
+        margin-top : 2px;
+        margin-left : 10px;
+    }
+    
+    .cards-sml-gap {
+        display: inline-block;
+        width : 4px;
+        height : 54px;
+        vertical-align:top;
+    }
+    
+    .cards-gap {
+        display: inline-block;
+        width : 10px;
+        height : 96px;
+        vertical-align:top;
+    }
+    
+    .cards-big-gap {
+        display: inline-block;
+        width : 20px;
+        height : 96px;
+        vertical-align:top;
+    }
+    
+    .cards-gap-horizontal {
+        width : 44px;
+        height : 14px;
+    }
+    
+    .rotate180 {
+        -webkit-transform: rotate(180deg);
+        -moz-transform: rotate(180deg);
+        -o-transform: rotate(180deg);
+        -ms-transform: rotate(180deg);
+        transform: rotate(180deg);
+    }
+    
+    .gray { 
+        -webkit-filter: grayscale(100%);
+        -moz-filter: grayscale(100%);
+        -ms-filter: grayscale(100%);
+        -o-filter: grayscale(100%);
+        filter: grayscale(100%);
+        filter: gray;
+    }
+    
+    #UIContainer {
+        position: absolute;
+        top : 0px;
+        left : 0px;
+        width : 100%;
+        height : 100%;
+        pointer-events: none;
+        /* background: #ff0; */
+    }
+    
+    #UILayer {
+        margin : 0 auto;
+        width : 1136px;
+        height : 640px;
+        overflow : hidden;
+        /* background: #000; */
+    }
+    
+    .UIElement {
+        position: absolute;
+        pointer-events:all;
+    }
+    
+    #UIMain {
+        width : 1136px;
+        height : 640px;
+        pointer-events: none;
+    }
+    
+    #UICardsOperat {
+        top : 400px;
+        left : 500px;
+    }
+    
+    .Operat {
+        display: inline-block;
+        height : 80px;
+        width : 90px;
+    }
+    
+    #UILogin {
+        display:block; 
+        width:device-width; 
+        max-width:320px;
+        background-color: #222; 
+        padding: 10px; 
+        margin:0 auto; 
+        margin-top: 10%;
+        border-radius: 10px; 
+        border:2px; 
+        border-color:#fff; 
+        border-style : solid; 
+        transform-style: preserve-3d;
+        pointer-events:all;
+    }
+    
+    #UIPlayerInfo {
+        display:block; 
+        position: absolute;
+        top : 0px;
+        width : 1136px;
+        height : 640px;
+        pointer-events: none;
+    }
+    
+    .playerName {
+        display:block;
+        position: absolute;
+        font-size : 24px;
+        font-weight:bold;
+        color : white;
+        text-shadow:
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000;  
+    }
+    
+    .frontName {
+        left : 20px;
+        top : 60px;
+    }
+    
+    .backName {
+        left : 980px;
+        top : 60px;
+    }
+    
+    .oppositeName {
+        left : 220px;
+        top : 34px;
+    }
+    
+    .selfName {
+        left : 980px;
+        top : 540px;
+    }
+    
+    .frontIcon {
+        left : 20px;
+        top : 90px;
+    }
+    
+    .flagIcon{
+        display:block;
+        position: absolute;
+    }
+    
+    .backIcon {
+        left : 980px;
+        top : 90px;
+    }
+    
+    .oppositeIcon  {
+        left : 220px;
+        top : 64px;
+        width : 44px;
+        height : 46px;
+    }
+    
+    .selfIcon  {
+        left : 980px;
+        top : 570px;
+    }
+    
+    #UIReady {
+        top : 430px;
+        left : 480px;
+    }
+    
+    #UIReadyOK {
+        position: absolute;
+        top : 436px;
+        left : 506px;
+    }
+    
+    .readyOKText {
+        font-size : 40px;
+        font-weight:bold;
+        color : white;
+        text-shadow:
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000; 
+    }
