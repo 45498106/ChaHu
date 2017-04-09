@@ -16,7 +16,7 @@ gameServer.Init();
 // 设置客户端根目录
 app.use(express.static(__dirname + "/client"));
 // 监听端口
-var port = 18080;
+var port = process.env.LEANCLOUD_APP_PORT || 80
 http.listen( port, function() {
     console.log('[DEBUG] Listening on *:' + port);
 });
