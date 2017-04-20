@@ -5,9 +5,12 @@ var Player = require("./Player.js");
 var Mahjong = require("./Mahjong.js");
 
 var enum_Pass = 0;
-var enum_Peng = 1;
-var enum_Gang = 2;
-var enum_Hu = 3;
+var enum_Niu = 1;
+var enum_Kan = 2;
+var enum_Jiang = 3;
+var enum_Peng = 4;
+var enum_Gang = 5;
+var enum_Hu = 6;
 
 // 11-19 筒子
 // 21-29 万子
@@ -87,6 +90,23 @@ Room.prototype.SendPlayerReady = function(){
     }
 }
 
+Room.prototype.PlayerPassOperate = function(player){
+    var me = this;
+    var process = false;
+    var checkEvent;
+    for (var i = 0; i < me.checks.length; ++i) {
+        checkEvent = me.checks[i];
+        if (checkEvent.place === player.place) {
+            checkEvent['select'] = enum_Pass;
+            process = true;
+            break;
+        }
+    }
+
+    if (process) me.ProcessCheck();
+}
+
+
 Room.prototype.AddPlayer = function(player)
 {
     var me = this;
@@ -112,12 +132,12 @@ Room.prototype.AddPlayer = function(player)
     player.socket.on('needThrowCard', function(data) {
         if (me.playing === false) { return; }
         var card = data.card;
-        if (me.getCardPlace === player.place) {
+        if (me.getCardPlace === player.place && me.checks.length === 0) {
             if(player.ThrowCard(card)) {
                 me.lastThrowCard = card;
                 me.lastThrowPlace = player.place;
                 me.BroadcastPlayers2(player, "throwCard", data.card);
-
+                
                 // 检测碰,杠,胡.
                 //    如果有玩家碰,那么通知玩家,有玩家出牌,出现时间选择是否碰牌. 非碰牌玩家依然显示玩家尚未出牌.
                 //        碰牌玩家选择碰牌, 通知非碰牌玩家有玩家出牌, 通知非碰牌玩家有人碰牌.
@@ -178,23 +198,63 @@ Room.prototype.AddPlayer = function(player)
         if (process) me.ProcessCheck();
     });
     
-    player.socket.on('passCards', function(data) {
+    player.socket.on('kanCards', function(data) {
         if (me.playing === false) { return; }
+        GameLog("kanCards");
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
             checkEvent = me.checks[i];
-            if (checkEvent.place === player.place && 
-               (typeof checkEvent.peng !== 'undefined' ||
-                typeof checkEvent.gang !== 'undefined' ||
-                typeof checkEvent.hu !== 'undefined' )) {
-                checkEvent['select'] = enum_Pass;
+            if (checkEvent.place === player.place && typeof checkEvent.kan !== 'undefined') {
+                checkEvent['select'] = enum_Kan;
                 process = true;
                 break;
             }
         }
         
         if (process) me.ProcessCheck();
+    });
+    
+    player.socket.on('niuCards', function(data) {
+        if (me.playing === false) { return; }
+        var process = false;
+        var checkEvent;
+        for (var i = 0; i < me.checks.length; ++i) {
+            checkEvent = me.checks[i];
+            if (checkEvent.place === player.place && typeof checkEvent.niu !== 'undefined') {
+                checkEvent['select'] = enum_Niu;
+                process = true;
+                break;
+            }
+        }
+        
+        if (process) me.ProcessCheck();
+    });
+    
+    player.socket.on('jiangCards', function(data) {
+        if (me.playing === false) { return; }
+        var process = false;
+        var checkEvent;
+        for (var i = 0; i < me.checks.length; ++i) {
+            checkEvent = me.checks[i];
+            if (checkEvent.place === player.place && typeof checkEvent.jiang !== 'undefined') {
+                checkEvent['select'] = enum_Jiang;
+                process = true;
+                break;
+            }
+        }
+        
+        if (process) me.ProcessCheck();
+    });
+    
+    player.socket.on('piaoCards', function(data) {
+        if (me.playing === false) { return; }
+        
+    });
+    
+    player.socket.on('passCards', function(data) {
+        if (me.playing === false) { return; }
+        me.PlayerPassOperate(player);
     });
     
     // 设置自己位子
@@ -276,6 +336,14 @@ Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
             player.socket.emit(action, Player.prototype.SendGangCards(who, argument, player, argument2));
         }else if(action === "huCards") {
             player.socket.emit(action, Player.prototype.SendHuCards(who, argument, player, argument2));
+        }else if(action === "kanCards") {
+            player.socket.emit(action, Player.prototype.SendKanCards(who, argument, player));
+        }else if(action === "niuCards") {
+            player.socket.emit(action, Player.prototype.SendNiuCards(who, argument, player));
+        }else if(action == "addNiuCard") {
+            player.socket.emit(action, Player.prototype.SendAddNiuCard(who, argument, player));
+        }else if(action === "jiangCards") {
+            player.socket.emit(action, Player.prototype.SendJiangCards(who, argument, player, argument2));
         }
     }
 }
@@ -303,19 +371,8 @@ function RandomNumBoth(Min,Max){
     return num;
 }
 
-// 新一局游戏
-Room.prototype.NewGame = function() {
-
-    this.cards = null;
-    this.cards = staticCards.slice();
-    this.cardsIndex = 0;
-    this.playing = true;
-    this.checks.splice(0, this.checks.length);
-    
-    // 随机庄家
-    this.bankerPlace = Util.RandomRange(0, 3);
-    this.BroadcastPlayers(null, "newGame", { "bankerPlace" : this.bankerPlace });
-    
+// 洗牌
+Room.prototype.RandomCards = function() {    
     // 打乱牌
     var i, a, b, t;
     var cardsMaxIdx = this.cards.length - 1;
@@ -329,10 +386,58 @@ Room.prototype.NewGame = function() {
             this.cards[a] = t;
         }
     }
+}
+
+// 定势洗牌
+Room.prototype.FixCards = function() {
+    // 先随机一下牌
+    var i, a, b, t;
+    var cardsMaxIdx = this.cards.length - 1;
+    for (i = 0; i < 120; ++i) {
+        a = Util.RandomRange(0, cardsMaxIdx);
+        b = Util.RandomRange(0, cardsMaxIdx);
+        if (a !== b) {
+            t = this.cards[b];
+            this.cards[b] = this.cards[a];
+            this.cards[a] = t;
+        }
+    }
+    
+    var fixCards = [45,46,47,11,11,11,22,22,23,23,24,24,31,34,26,45,46,47,26,27,28,28,28];
+    var t;
+    for (var i = 0; i < fixCards.length; ++i) {
+        for (var j = i; j < this.cards.length; ++j) {
+            if (fixCards[i] == this.cards[j]) {
+                if (i !== j) {
+                    t = this.cards[i];
+                    this.cards[i] = this.cards[j];
+                    this.cards[j] = t;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
+// 新一局游戏
+Room.prototype.NewGame = function() 
+{
+    this.cards = staticCards.slice();
+    this.cardsIndex = 0;
+    this.playing = true;
+    this.checks.splice(0, this.checks.length);
+    
+    //this.RandomCards();
+    this.FixCards();
+    
+    this.bankerPlace = 0;
+    //this.bankerPlace = Util.RandomRange(0, 3);
+    this.BroadcastPlayers(null, "newGame", { "bankerPlace" : this.bankerPlace });
     
     // 发牌
     var initCards = new Array(13);
-    var j;
+    var i,j;
     for (i = 0; i < 4; ++i) {
         for (j = 0; j < 13; ++j, ++this.cardsIndex) {
             initCards[j] = this.cards[this.cardsIndex];
@@ -368,33 +473,66 @@ Room.prototype.PlayeAddCard = function() {
         var player = this.players[this.getCardPlace];
         var card = this.cards[this.cardsIndex++];
 
-        var checkEvent = null;
-        if (Mahjong.HasGangCardsByHand(player.cards) ||
-            Mahjong.CanGangCards(player.cards, card) ||
-            Mahjong.CanGangCards(player.pengCards, card) ) {
-            if (checkEvent === null) {
-                checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+        if (player.niuCards.length > 0 && 
+           (card === 45 || card === 46 || card === 47))
+        {
+            // 补牛
+            player.AddNiuCard(card);
+            this.BroadcastPlayers2(player, "addNiuCard", card);
+            
+            // 等待一秒继续补牌
+            var getCardPlace = this.getCardPlace;
+            this.getCardPlace = -1;
+            function AddCardNextSecond(room, getCardPlace) {
+                return function () {
+                    room.getCardPlace = getCardPlace;
+                    room.PlayeAddCard();
+                };
             }
-            checkEvent.gang = 1;
+            setTimeout(AddCardNextSecond(this, getCardPlace), 1000);
         }
-
-        var huCards = player.GetHuCards();
-        for (var j = 0; j < huCards.length; ++j) {
-            if (huCards[j] === card) {
+        else {
+            
+            player.AddCard(card);
+            var checkEvent = null;
+            if (Mahjong.HasGangCardsByHand(player.cards) ||
+                Mahjong.HasGangCards(player.cards, card) || 
+                Mahjong.CanGangCards(player.kanCards, card)) {
+                if (checkEvent === null) {
+                    checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+                }
+                checkEvent.gang = 1;
+            }
+            
+            if (Mahjong.HasKanCardsByHand(player.cards) || 
+                Mahjong.HasKanCards(player.cards, card) ) {
+                if (checkEvent === null) {
+                    checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+                }
+                checkEvent.kan = 1;
+            }
+            
+            if (player.canNiu) {
+                if (checkEvent === null) {
+                    checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+                }
+                checkEvent.niu = 1;
+            }
+            
+            if (player.isHuCards) {
                 if (checkEvent === null) {
                     checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
                 }
                 checkEvent.hu = 1;
-                break;
             }
+            
+            if (checkEvent !== null) {
+                this.checks.push(checkEvent);
+                GameLog("trigger checkEvent(add card)---------------->");
+            }
+            
+            this.BroadcastPlayers2(player, "getCard", card);
         }
-        
-        if (checkEvent !== null) {
-            this.checks.push(checkEvent);
-        }
-        
-        player.AddCard(card);
-        this.BroadcastPlayers2(player, "getCard", card);
     }
 }
 
@@ -422,6 +560,21 @@ Room.prototype.ThrowCardCheck = function(player, card) {
             checkEvent.gang = 1;
         }
         
+        // 将牌
+        if (1) {
+            var nextPlace = player.place + 1;
+            if (nextPlace === 4) { 
+                nextPlace = 0; 
+            }
+            
+            if (otherPlayer.place === nextPlace && otherPlayer.CanJiangCards(card)) {
+                if (checkEvent === null) {
+                    checkEvent = { 'place' : otherPlayer.place, 'throwCheck' : 1};
+                }
+                checkEvent.jiang = 1;
+            }
+        }
+        
         huCards = otherPlayer.GetHuCards();
         for (var j = 0; j < huCards.length; ++j) {
             if (huCards[j] === card) {
@@ -435,6 +588,7 @@ Room.prototype.ThrowCardCheck = function(player, card) {
         
         if (checkEvent !== null) {
             this.checks.push(checkEvent);
+            GameLog("trigger checkEvent(throw card)---------------->");
         }
     }
     
@@ -489,8 +643,12 @@ Room.prototype.ProcessCheck = function() {
         checkEvent = me.checks[0];
         var select = checkEvent.select;
         var place = checkEvent.place;
-        var player = me.players[place];
         var selfCheck = typeof checkEvent.selfCheck !== 'undefined'
+        // 清除事件
+        me.checks.splice(0, me.checks.length);
+        GameLog("---------------->ProcessCheck:" + select);
+        
+        var player = me.players[place];
         switch(select) {
             case enum_Hu: {
                 GameLog("玩家" + player.nickName + "胡牌了");
@@ -516,9 +674,16 @@ Room.prototype.ProcessCheck = function() {
                 me.PlayeAddCard();
             }break;
             case enum_Peng: {
-                player.PengCards(me.lastThrowCard);
-                me.BroadcastPlayers2(player, "pengCards", me.lastThrowCard, me.lastThrowPlace);
-                me.getCardPlace = player.place;
+                me.PlayerPengCards(player);
+            }break;
+            case enum_Niu: {
+                me.PlayerNiuCards(player);
+            }break;
+            case enum_Kan: {
+                me.PlayerKanCards(player);
+            }break;
+            case enum_Jiang : {
+                me.PlayerJiangCards(player);
             }break;
             case enum_Pass: {
                 if (selfCheck === false ) {
@@ -527,9 +692,97 @@ Room.prototype.ProcessCheck = function() {
                 }
             }break;
         }
-        
-        me.checks.splice(0, me.checks.length);
     }
+}
+
+Room.prototype.TriggerSelfChack = function(player)
+{
+    var checkEvent = null;
+    if (Mahjong.HasGangCardsByHand(player.cards)) {
+        if (checkEvent === null) {
+            checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+        }
+        checkEvent.gang = 1;
+    }
+    
+    if (Mahjong.HasKanCardsByHand(player.cards)) {
+        if (checkEvent === null) {
+            checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+        }
+        checkEvent.kan = 1;
+    }
+    
+    if (player.canNiu) {
+        if (checkEvent === null) {
+            checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+        }
+        checkEvent.niu = 1;
+    }
+
+    if (player.isHuCards) {
+        if (checkEvent === null) {
+            checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+        }
+        checkEvent.hu = 1;
+    }
+    
+    if (checkEvent !== null) {
+        this.checks.push(checkEvent);
+        GameLog("trigger checkEvent(self check)---------------->");
+    }
+}
+
+
+Room.prototype.PlayerPengCards = function (player) {
+    // 玩家碰牌
+    player.PengCards(this.lastThrowCard);
+    // 触发检测
+    // this.TriggerSelfChack(player);
+    // 通知
+    this.BroadcastPlayers2(player, "pengCards", this.lastThrowCard, this.lastThrowPlace);
+    // 改变出牌位置
+    this.getCardPlace = player.place;
+}
+
+Room.prototype.PlayerJiangCards = function (player) {
+    // 玩家将牌
+    player.AddJiangCard(this.lastThrowCard);
+    // 通知
+    this.BroadcastPlayers2(player, "jiangCards", this.lastThrowCard, this.lastThrowPlace);
+    // 改变出牌位置
+    this.getCardPlace = player.place;
+}
+
+Room.prototype.PlayerKanCards = function (player) {
+    // 玩家坎牌
+    player.KanCards();
+    // 触发检测
+    this.TriggerSelfChack(player);
+    // 通知
+    this.BroadcastPlayers2(player, "kanCards");
+}
+
+Room.prototype.PlayerNiuCards = function (player) {
+    // 玩家碰牌
+    var countArray = [];
+    var c = 0;
+    Mahjong.HasNiuCardsByHand(player.cards, countArray);
+    var i;
+    for (i = 0; i < countArray.length; ++i) {
+        c += countArray[i];
+    }
+    
+    var addNum = c - 3;
+    var addCards = [];
+    for (i = 0; i < addNum; ++i) {
+        addCards.push(this.cards[this.cardsIndex++]);
+    }
+    player.NiuCards(countArray, addCards);
+    
+    // 触发检测
+    this.TriggerSelfChack(player);
+    // 通知
+    this.BroadcastPlayers2(player, "niuCards", addCards);
 }
 
 Room.prototype.GameEnd = function() {

@@ -13,29 +13,29 @@ GameLog = require('./common/Logger.js');
 var gameServer = new (require('./server/GameServer.js'))();
 gameServer.Init();
 
-// ÉèÖÃ¿Í»§¶Ë¸ùÄ¿Â¼
+// è®¾ç½®å®¢æˆ·ç«¯æ ¹ç›®å½•
 app.use(express.static(__dirname + "/client"));
-// ¼àÌý¶Ë¿Ú
+// ç›‘å¬ç«¯å£
 var port = 18080;
 http.listen( port, function() {
     console.log('[DEBUG] Listening on *:' + port);
 });
 
 //--------------------------------------------------
-// ³£Á¿
+// å¸¸é‡
 //--------------------------------------------------
-var c_HeartbeatCheckMS = 1000;          //ÐÄÌø¼ì²âºÁÃëÊý
-var c_HeartbeatCheckTimeoutCount = 2;   //ÐÄÌø¼ì²â³¬Ê±ÊýÁ¿
+var c_HeartbeatCheckMS = 1000;          //å¿ƒè·³æ£€æµ‹æ¯«ç§’æ•°
+var c_HeartbeatCheckTimeoutCount = 2;   //å¿ƒè·³æ£€æµ‹è¶…æ—¶æ•°é‡
 
 //--------------------------------------------------
-// È«¾Ö±äÁ¿
+// å…¨å±€å˜é‡
 //--------------------------------------------------
 var clients = [];
 
 IO.on('connection', function (socket) {
     GameLog('Client [' + socket.id + '] connected!');
     
-    // ´´½¨Ò»¸ö¿Í»§Á´½ÓÐÅÏ¢.
+    // åˆ›å»ºä¸€ä¸ªå®¢æˆ·é“¾æŽ¥ä¿¡æ¯.
     var client = { 
                     id: socket.id, 
                     socket : socket,
@@ -50,17 +50,17 @@ IO.on('connection', function (socket) {
     
     GameLog('Total client: ' + clients.length);
     
-    // ÐÄÌøÏìÓ¦
+    // å¿ƒè·³å“åº”
     socket.on('heartbeat', function () {
         client.SetHeartbeatTime();
         socket.emit('heartbeatBack');
     });
     
-    // ¶Ï¿ªÁ´½Ó
+    // æ–­å¼€é“¾æŽ¥
     socket.on('disconnect', function () {
         GameLog('Client [' + client.id + '] disconnected!');
 
-        // Í¨ÖªgameServer É¾³ýclient
+        // é€šçŸ¥gameServer åˆ é™¤client
         gameServer.DeleteClient(client);
         
         client.socket.broadcast.emit('clientDisconnect', { name: client.id  });
@@ -73,11 +73,11 @@ IO.on('connection', function (socket) {
         GameLog('Total client: ' + clients.length);
     });
     
-    // Í¨ÖªgameServer ½øÈëÐÂclient
+    // é€šçŸ¥gameServer è¿›å…¥æ–°client
     gameServer.NewClient(client);
 });
 
-// ¼ì²â¿Í»§ÐÄÌø
+// æ£€æµ‹å®¢æˆ·å¿ƒè·³
 function CheckClientHeartbeat()
 {
     var now = new Date().getTime();
@@ -87,7 +87,7 @@ function CheckClientHeartbeat()
         if (now - client.heartbeatTime > c_HeartbeatCheckMS) {
             ++client.timeoutCount;
             if (client.timeoutCount > c_HeartbeatCheckTimeoutCount) {
-                // ³¬¹ý³¬Ê±´ÎÊý,¶Ï¿ª¿Í»§Á´½Ó
+                // è¶…è¿‡è¶…æ—¶æ¬¡æ•°,æ–­å¼€å®¢æˆ·é“¾æŽ¥
                 client.socket.disconnect();
             }
         }else {

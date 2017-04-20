@@ -1,34 +1,93 @@
 GameLog = engine.commom.Logger;
 Util = engine.commom.Util;
 
+
+// 是否有效的牌
+function IsValidCard(card) {
+    if ((card >= 11 && card <= 19) ||
+        (card >= 21 && card <= 29) ||
+        (card >= 31 && card <= 39) ||
+        (card >= 45 && card <= 47) )
+    {
+        return true;
+    }
+    
+    return false;
+}
+
+var cardSounds = [];
+for (var si = 0; si < 50; ++si ) {
+    if (IsValidCard(si)){
+        cardSounds.push(new Howl({src: ['./sound/g/'+si+'.mp3', './sound/g/'+si+'.mp3']}))
+    }
+    else {
+        cardSounds.push(null);
+    }
+}
+
+var pengSound = new Howl({src: ['./sound/g/peng.mp3', './sound/g/peng.mp3']});
+var gangSound = new Howl({src: ['./sound/g/gang.mp3', './sound/g/gang.mp3']});
+var huSound = new Howl({src: ['./sound/g/hu.mp3', './sound/g/hu.mp3']});
+
 var net;
 var game;
 var nickName = "玩家" + Math.round(Math.random() * 1000000);
 
-// 初始自己的手牌
-function SelfInitCards(cards, pengCards, gangCards) {
-    $('#Self').empty();
-    var a = '<div class="cards"><img oncontextmenu="return false;" ondragstart="return false;" class="fullScale cards-hover" src="./images/2/mingmah_';
-    var b = '.png"></div>';
-    var gap = '<div class="cards-gap"></div>';
-    var last, image;
+function InitSpecialCards(htmlElementName, htmlElementA, htmlElementB, htmlElementGap,  pengCards, gangCards, kanCards, niuCards, jiangCards) {
     var i, j;
+    
+    if (niuCards) {
+        $(htmlElementName).append(htmlElementA+'45'+htmlElementB);
+        $(htmlElementName).append(htmlElementA+'46'+htmlElementB);
+        $(htmlElementName).append(htmlElementA+'47'+htmlElementB);
+        $(htmlElementName).append(htmlElementGap);
+    }
+    
+    for (i = 0; jiangCards && i < jiangCards.length; i+=2) {
+        for (j = 0; j < 2; j++) {
+            $(htmlElementName).append(htmlElementA+jiangCards[i]+htmlElementB);
+        }
+        $(htmlElementName).append(htmlElementGap);
+    }
     
     for (i = 0; gangCards && i < gangCards.length; i+=4) {
         for (j = 0; j < 4; j++) {
-            $('#Self').append(a+gangCards[i]+b);
+            $(htmlElementName).append(htmlElementA+gangCards[i]+htmlElementB);
         }
-        $('#Self').append(gap);
+        $(htmlElementName).append(htmlElementGap);
+    }
+    
+    for (i = 0; kanCards && i < kanCards.length; i+=3) {
+        for (j = 0; j < 3; j++) {
+            if (j == 1) {
+                $(htmlElementName).append(htmlElementA+kanCards[i+j]+htmlElementB);
+            }else {
+                $(htmlElementName).append(htmlElementA+'0'+htmlElementB);
+            }
+        }
+        $(htmlElementName).append(htmlElementGap);
     }
     
     for (i = 0; pengCards && i < pengCards.length; i+=3) {
         for (j = 0; j < 3; j++) {
-            $('#Self').append(a+pengCards[i+j]+b);
+            $(htmlElementName).append(htmlElementA+pengCards[i+j]+htmlElementB);
         }
-        $('#Self').append(gap);
+        $(htmlElementName).append(htmlElementGap);
     }
+}
+
+
+// 初始自己的手牌
+function SelfInitCards(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
+    $('#Self').empty();
+    var a = '<div class="cards"><img oncontextmenu="return false;" ondragstart="return false;" class="fullScale cards-hover" src="./images/2/mingmah_';
+    var b = '.png"></div>';
+    var gap = '<div class="cards-gap"></div>';
+
+    InitSpecialCards('#Self', a, b, gap, pengCards, gangCards, kanCards, niuCards, jiangCards);
     
-    for (i = 0; i < cards.length; ++i) {
+    var last, image;
+    for (var i = 0; i < cards.length; ++i) {
         $('#Self').append(a+cards[i]+b);
         last = $('#Self').children().last();
         image = $(last).children('img');
@@ -61,27 +120,15 @@ function DelSelfLastThrowCard() {
 }
 
 // 初始上家的手牌
-function FrontInitCards(cards, pengCards, gangCards) {
+function FrontInitCards(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
     $('#Front').empty();
     var a = '<div class="cards-horizontal"><img oncontextmenu="return false;" ondragstart="return false;" class="fullScale" src="./images/3/mingmah_';
     var b = '.png"></div>';
-    var gap = '<div class="cards-gap-horizontal"></div>'
-    var i, j;
-    for (i = 0; gangCards && i < gangCards.length; i+=4) {
-        for (j = 0; j < 4; j++) {
-            $('#Front').append(a+gangCards[i]+b);
-        }
-        $('#Front').append(gap);
-    }
+    var gap = '<div class="cards-gap-horizontal"></div>';
     
-    for (i = 0; pengCards && i < pengCards.length; i+=3) {
-        for (j = 0; j < 3; j++) {
-            $('#Front').append(a+pengCards[i+j]+b);
-        }
-        $('#Front').append(gap);
-    }
+    InitSpecialCards('#Front', a, b, gap, pengCards, gangCards, kanCards, niuCards, jiangCards);
     
-    for (i = 0; i < cards.length; ++i) {
+    for (var i = 0; i < cards.length; ++i) {
         $('#Front').append(a+cards[i]+b);
     }
 }
@@ -116,27 +163,15 @@ function DelFrontLastThrowCard() {
 
 
 // 初始下家的手牌
-function BackInitCards(cards, pengCards, gangCards) {
+function BackInitCards(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
     $('#Back').empty();
     var a = '<div class="cards-horizontal"><img oncontextmenu="return false;" ondragstart="return false;" class="fullScale" src="./images/1/mingmah_';
     var b = '.png"></div>';
     var gap = '<div class="cards-gap-horizontal"></div>'
-    var i, j;
-    for (i = 0; gangCards && i < gangCards.length; i+=4) {
-        for (j = 0; j < 4; j++) {
-            $('#Back').append(a+gangCards[i]+b);
-        }
-        $('#Back').append(gap);
-    }
     
-    for (i = 0; pengCards && i < pengCards.length; i+=3) {
-        for (j = 0; j < 3; j++) {
-            $('#Back').append(a+pengCards[i+j]+b);
-        }
-        $('#Back').append(gap);
-    }
+    InitSpecialCards('#Back', a, b, gap, pengCards, gangCards, kanCards, niuCards, jiangCards);
     
-    for (i = 0; i < cards.length; ++i) {
+    for (var i = 0; i < cards.length; ++i) {
         $('#Back').append(a+cards[i]+b);
     }
 }
@@ -170,27 +205,15 @@ function DelBackLastThrowCard() {
 }
 
 // 初始对家的手牌
-function OppositeInitCards(cards, pengCards, gangCards) {
+function OppositeInitCards(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
     $('#Opposite').empty();
     var a = '<div class="cards-small"><img oncontextmenu="return false;" ondragstart="return false;" class="fullScale" src="./images/2/mingmah_';
     var b = '.png"></div>';
     var gap = '<div class="cards-sml-gap"></div>'
-    var i, j;
-    for (i = 0; gangCards && i < gangCards.length; i+=4) {
-        for (j = 0; j < 4; j++) {
-            $('#Opposite').append(a+gangCards[i]+b);
-        }
-        $('#Opposite').append(gap);
-    }
     
-    for (i = 0; pengCards && i < pengCards.length; i+=3) {
-        for (j = 0; j < 3; j++) {
-            $('#Opposite').append(a+pengCards[i+j]+b);
-        }
-        $('#Opposite').append(gap);
-    }
+    InitSpecialCards('#Opposite', a, b, gap, pengCards, gangCards, kanCards, niuCards, jiangCards);
     
-    for (i = 0; i < cards.length; ++i) {
+    for (var i = 0; i < cards.length; ++i) {
         $('#Opposite').append(a+cards[i]+b);
     }
 }
@@ -275,13 +298,31 @@ function ClearGameScene() {
 
 
 
-function ShowOperat(peng, gang, hu) {
+function ShowOperat(jiang, niu, kan, peng, gang, hu) {
     HiddenOperat();
     
-    if (peng === false  && gang === false && hu === false)
+    if (jiang === false && niu === false && kan === false && peng === false  && gang === false && hu === false)
         return;
     
     var image;
+    image = '<img oncontextmenu="return false;" ondragstart="return false;" class="fullScale ' + (jiang ? "" : "gray") + '" src="./images/Button_JiangAction.png">'
+    $('.JiangCards').append(image);
+    if (jiang) {
+         $('.JiangCards').children('img').attr("onclick", "JiangCards();");
+    }
+
+    image = '<img oncontextmenu="return false;" ondragstart="return false;" class="fullScale ' + (niu ? "" : "gray") + '" src="./images/Button_NiuAction.png">'
+    $('.NiuCards').append(image);
+    if (niu) {
+         $('.NiuCards').children('img').attr("onclick", "NiuCards();");
+    }
+    
+    image = '<img oncontextmenu="return false;" ondragstart="return false;" class="fullScale ' + (kan ? "" : "gray") + '" src="./images/Button_KanAction.png">'
+    $('.KanCards').append(image);
+    if (kan) {
+         $('.KanCards').children('img').attr("onclick", "KanCards();");
+    }
+    
     image = '<img oncontextmenu="return false;" ondragstart="return false;" class="fullScale ' + (peng ? "" : "gray") + '" src="./images/Button_PengAction.png">'
     $('.PengCards').append(image);
     if (peng) {
@@ -293,7 +334,6 @@ function ShowOperat(peng, gang, hu) {
     if (gang) {
          $('.GangCards').children('img').attr("onclick", "GangCards();");
     }
-    
     
     image = '<img oncontextmenu="return false;" ondragstart="return false;" class="fullScale ' + (hu ? "" : "gray") + '" src="./images/Button_HuAction.png">'
     $('.HuCards').append(image);
@@ -308,6 +348,9 @@ function ShowOperat(peng, gang, hu) {
 }
 
 function HiddenOperat() {
+    $('.JiangCards').empty();
+    $('.NiuCards').empty();
+    $('.KanCards').empty();
     $('.PengCards').empty();
     $('.GangCards').empty();
     $('.HuCards').empty();
@@ -318,23 +361,43 @@ function NeedThrowCards(cardIndex) {
     if (game.playerSelf.place === game.getCardsPlace) {
         var index = parseInt(cardIndex);
         net.socket.emit('needThrowCard',  { "card" : game.playerSelf.cards[index] } );
+        ShowOperat(false,false,false,false,false,false);
     }
+}
+
+function JiangCards() {
+    net.socket.emit('jiangCards');
+    ShowOperat(false,false,false,false,false,false);
+}
+
+function NiuCards() {
+    net.socket.emit('niuCards');
+    ShowOperat(false,false,false,false,false,false);
+}
+
+function KanCards() {
+    net.socket.emit('kanCards');
+    ShowOperat(false,false,false,false,false,false);
 }
 
 function PengCards() {
     net.socket.emit('pengCards');
+    ShowOperat(false,false,false,false,false,false);
 }
 
 function GangCards() {
     net.socket.emit('gangCards');
+    ShowOperat(false,false,false,false,false,false);
 }
 
 function HuCards() {
     net.socket.emit('huCards');
+    ShowOperat(false,false,false,false,false,false);
 }
 
 function PassCards() {
     net.socket.emit('passCards');
+    ShowOperat(false,false,false,false,false,false);
 }
 
 function Ready() {
@@ -353,6 +416,19 @@ function DelLastThrowCardByPlace(place) {
     }
 }
 
+function InitPlayerCards(place, player)
+{
+    if (game.IsFrontPlayer(place)) {
+        FrontInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+    }else if (game.IsBackPlayer(place)) {
+        BackInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+    }else if (game.IsOppositePlayer(place)){
+        OppositeInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+    }else {
+        SelfInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+    }
+}
+
 //-------------------------------------------------------------
 function Player(){
     this.id = -1;
@@ -361,6 +437,17 @@ function Player(){
     this.cards = null;
     this.pengCards = null;
     this.gangCards = null;
+    this.niuCards = null;
+    this.kanCards = null;
+    this.jiangCards = null;
+}
+
+Player.prototype.Clear = function() {
+    this.pengCards = null;
+    this.gangCards = null;
+    this.niuCards = null;
+    this.kanCards = null;
+    this.jiangCards = null;
 }
 
 Player.prototype.Init = function(id, place, nickName) {
@@ -376,6 +463,7 @@ function Game() {
     this.roomId = 0;
     this.bankerPlace = 0;
     this.getCardsPlace = 0;
+    this.needFlushCard = false;
 }
 
 Game.prototype.GetFrontPlayer = function() {
@@ -486,6 +574,7 @@ Game.prototype.PacketHandler = function() {
         game.bankerPlace = data.bankerPlace;
         game.SetZhuangFlag(game.bankerPlace);
         game.getCardsPlace = data.bankerPlace;
+        game.needFlushCard = false;
         
         $('#UIReady').hide();
         $('#UIReadyOK').hide();
@@ -546,32 +635,28 @@ Game.prototype.PacketHandler = function() {
         if (game.playerSelf.place === place) {
             game.playerSelf.cards = data.cards.slice();
             game.playerSelf.cards.sort();
-            game.playerSelf.pengCards = null;
-            game.playerSelf.gangCards = null;
-            SelfInitCards(game.playerSelf.cards, game.playerSelf.pengCards, game.playerSelf.gangCards);
+            game.playerSelf.Clear();
+            SelfInitCards(game.playerSelf.cards, game.playerSelf.pengCards, game.playerSelf.gangCards, game.playerSelf.kanCards, game.playerSelf.niuCards, game.playerSelf.jiangCards);
         }else {
             var player;
             if (game.IsFrontPlayer(place)) {
                 player = game.GetFrontPlayer();
                 player.cards = data.cards.slice();
                 player.cards.sort();
-                player.pengCards = null;
-                player.gangCards = null;
-                FrontInitCards(player.cards, player.pengCards, player.gangCards);
+                player.Clear();
+                FrontInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
             }else if (game.IsBackPlayer(place)) {
                 player = game.GetBackPlayer();
                 player.cards = data.cards.slice();
                 player.cards.sort();
-                player.pengCards = null;
-                player.gangCards = null;
-                BackInitCards(player.cards, player.pengCards, player.gangCards);
+                player.Clear();
+                BackInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
             }else {
                 player = game.GetOppositePlayer();
                 player.cards = data.cards.slice();
                 player.cards.sort();
-                player.pengCards = null;
-                player.gangCards = null;
-                OppositeInitCards(player.cards, player.pengCards, player.gangCards)
+                player.Clear();
+                OppositeInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards)
             }
         }
     });
@@ -581,8 +666,15 @@ Game.prototype.PacketHandler = function() {
         GameLog('getCard', data);
         var place = data.place;
         var card = data.card;
+        var player = game.players[place];
+
+        if (game.needFlushCard) {
+            InitPlayerCards(place, player);
+            game.needFlushCard = false;
+        }
+        
         // 添加摸牌
-        game.players[place].cards.push(card);
+        player.cards.push(card);
         
         if (game.IsFrontPlayer(place)) {
             FrontAddCard(card);
@@ -595,7 +687,7 @@ Game.prototype.PacketHandler = function() {
         }
         
         game.getCardsPlace = place;
-        ShowOperat(typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
+        ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
     });
     
     socket.on('throwCard', function (data) {
@@ -613,20 +705,21 @@ Game.prototype.PacketHandler = function() {
         }
         
         if (game.IsFrontPlayer(place)) {
-            FrontInitCards(player.cards, player.pengCards, player.gangCards);
+            FrontInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
             FrontThrowCard(card);
         }else if (game.IsBackPlayer(place)) {
-            BackInitCards(player.cards, player.pengCards, player.gangCards);
+            BackInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
             BackThrowCard(card);
         }else if (game.IsOppositePlayer(place)){
-            OppositeInitCards(player.cards, player.pengCards, player.gangCards);
+            OppositeInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
             OppositeThrowCard(card);
         }else {
-            SelfInitCards(player.cards, player.pengCards, player.gangCards);
+            SelfInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
             SelfThrowCard(card);
         }
         
-        ShowOperat(typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
+        ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
+        cardSounds[card].play();
     });
     
     socket.on('pengCards', function (data) {
@@ -644,21 +737,15 @@ Game.prototype.PacketHandler = function() {
         player.cards.sort();
         player.pengCards = data.pengCards.slice();
 
-        if (game.IsFrontPlayer(place)) {
-            FrontInitCards(player.cards, player.pengCards, player.gangCards);
-        }else if (game.IsBackPlayer(place)) {
-            BackInitCards(player.cards, player.pengCards, player.gangCards);
-        }else if (game.IsOppositePlayer(place)){
-            OppositeInitCards(player.cards, player.pengCards, player.gangCards)
-        }else {
-            SelfInitCards(player.cards, player.pengCards, player.gangCards);
-        }
+        InitPlayerCards(place, player);
         
         if (typeof data.throwCardPlace !== 'undefined') {
             DelLastThrowCardByPlace(data.throwCardPlace);
         }
         
+        ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
         game.getCardsPlace = place;
+        pengSound.play();
     });
     
     socket.on('gangCards', function (data) {
@@ -676,21 +763,15 @@ Game.prototype.PacketHandler = function() {
         player.cards.sort();
         player.gangCards = data.gangCards.slice();
 
-        if (game.IsFrontPlayer(place)) {
-            FrontInitCards(player.cards, player.pengCards, player.gangCards);
-        }else if (game.IsBackPlayer(place)) {
-            BackInitCards(player.cards, player.pengCards, player.gangCards);
-        }else if (game.IsOppositePlayer(place)){
-            OppositeInitCards(player.cards, player.pengCards, player.gangCards)
-        }else {
-            SelfInitCards(player.cards, player.pengCards, player.gangCards);
-        }
+        InitPlayerCards(place, player);
         
         if (typeof data.throwCardPlace !== 'undefined') {
             DelLastThrowCardByPlace(data.throwCardPlace);
         }
         
+        ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
         game.getCardsPlace = place;
+        gangSound.play();
     });
     
     socket.on('huCards', function (data) {
@@ -710,17 +791,92 @@ Game.prototype.PacketHandler = function() {
             player.gangCards = data.gangCards.slice();
         }
         
-        if (game.IsFrontPlayer(place)) {
-            FrontInitCards(player.cards, player.pengCards, player.gangCards);
-        }else if (game.IsBackPlayer(place)) {
-            BackInitCards(player.cards, player.pengCards, player.gangCards);
-        }else if (game.IsOppositePlayer(place)){
-            OppositeInitCards(player.cards, player.pengCards, player.gangCards)
-        }else {
-            SelfInitCards(player.cards, player.pengCards, player.gangCards);
+        InitPlayerCards(place, player);
+        huSound.play();
+        game.getCardsPlace = -1;
+    });
+    
+    socket.on('kanCards', function (data) {
+        // 玩家胡牌
+        GameLog(data);
+        var place = data.place;
+        var player = game.players[place];
+        
+        player.cards = data.cards.slice();
+        player.cards.sort();
+        player.kanCards = data.kanCards.slice();
+        
+        InitPlayerCards(place, player);
+        
+        ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
+        game.getCardsPlace = place;
+    });
+    
+    socket.on('niuCards', function (data) {
+        // 玩家牛牌
+        GameLog(data);
+        var place = data.place;
+        var player = game.players[place];
+        
+        player.cards = data.cards.slice();
+        player.cards.sort();
+        player.niuCards = data.niuCards.slice();
+        
+        InitPlayerCards(place, player);
+        
+        ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
+        game.getCardsPlace = place;
+    });
+    
+    socket.on('addNiuCard', function (data) {
+        // 玩家胡牌
+        GameLog(data);
+        
+        var place = data.place;
+        var addNiuCard = data.addNiuCard;
+        var player = game.players[place];
+        
+        if (game.needFlushCard) {
+            InitPlayerCards(place, player);
         }
         
-        game.getCardsPlace = -1;
+        // 添加牛牌
+        player.niuCards.push(addNiuCard);
+
+        if (game.IsFrontPlayer(place)) {
+            FrontAddCard(addNiuCard);
+        }else if (game.IsBackPlayer(place)) {
+            BackAddCard(addNiuCard);
+        }else if (game.IsOppositePlayer(place)){
+            OppositeAddCard(addNiuCard)
+        }else {
+            SelfAddCard(addNiuCard);
+        }
+        
+        ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
+        game.getCardsPlace = place;
+        game.needFlushCard = true;
+    });
+    
+    socket.on('jiangCards', function (data) {
+        // 玩家胡牌
+        GameLog(data);
+        
+        var place = data.place;
+        var player = game.players[place];
+        
+        player.cards = data.cards.slice();
+        player.cards.sort();
+        player.jiangCards = data.jiangCards.slice();
+        
+        InitPlayerCards(place, player);
+        
+        if (typeof data.throwCardPlace !== 'undefined') {
+            DelLastThrowCardByPlace(data.throwCardPlace);
+        }
+        
+        ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', typeof data.gang !== 'undefined', typeof data.hu != 'undefined');
+        game.getCardsPlace = place;
     });
 }
 
