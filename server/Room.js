@@ -428,8 +428,8 @@ Room.prototype.NewGame = function()
     this.playing = true;
     this.checks.splice(0, this.checks.length);
     
-    //this.RandomCards();
-    this.FixCards();
+    this.RandomCards();
+    //this.FixCards();
     
     this.bankerPlace = 0;
     //this.bankerPlace = Util.RandomRange(0, 3);
