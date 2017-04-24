@@ -358,8 +358,15 @@ Player.prototype.SendThrowCard = function(player, card, self)
             data['gang'] = 1;
         }
 
-        if (self.CanJiangCards(card)) {
-            data['jiang'] = 1;
+        if (1) {
+            var nextPlace = player.place + 1;
+            if (nextPlace === 4) { 
+                nextPlace = 0; 
+            }
+            
+            if (nextPlace === self.place && self.CanJiangCards(card)) {
+                data['jiang'] = 1;
+            }
         }
 
         var huCards = self.GetHuCards();
