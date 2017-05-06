@@ -354,7 +354,8 @@ Player.prototype.SendThrowCard = function(player, card, self)
             data['peng'] = 1;
         }
         
-        if (Mahjong.CanGangCards(self.cards, card)) {
+        if (Mahjong.CanGangCards(self.cards, card) ||
+            Mahjong.CanGangCards(self.kanCards, card)) {
             data['gang'] = 1;
         }
 

@@ -403,7 +403,7 @@ Room.prototype.FixCards = function() {
         }
     }
     
-    var fixCards = [45,46,47,11,11,11,22,22,23,23,24,24,31,34,26,45,46,47,26,27,28,28,28];
+    var fixCards = [45,46,45,11,11,11,22,22,23,23,24,24,31,34,26,46,46,47,26,27,28,28,28];
     var t;
     for (var i = 0; i < fixCards.length; ++i) {
         for (var j = i; j < this.cards.length; ++j) {
@@ -553,7 +553,8 @@ Room.prototype.ThrowCardCheck = function(player, card) {
             checkEvent.peng = 1;
         }
         
-        if (Mahjong.CanGangCards(otherPlayer.cards, card)) {
+        if (Mahjong.CanGangCards(otherPlayer.cards, card) ||
+            Mahjong.CanGangCards(player.kanCards, card)) {
             if (checkEvent === null) {
                 checkEvent = { 'place' : otherPlayer.place, 'throwCheck' : 1};
             }
@@ -595,7 +596,7 @@ Room.prototype.ThrowCardCheck = function(player, card) {
     return this.checks.length > 0;
 }
 
-function RoomSort(room) {
+function RuleSort(room) {
     // return < 0  排序后a在b前面
     // return === 0  排序后a,b位置不变
     // return > 0  排序后b在a前面
@@ -621,6 +622,56 @@ function RoomSort(room) {
     }
 }
 
+Room.prototype.ProcessEvent = function(place, select, selfCheck) {
+    GameLog("---------------->ProcessCheck:" + select);
+    var me = this;
+    var player = me.players[place];
+    switch(select) {
+        case enum_Hu: {
+            GameLog("玩家" + player.nickName + "胡牌了");
+            if (selfCheck) {
+                me.BroadcastPlayers2(player, "huCards", me.cards[me.cardsIndex - 1]);
+            }else {
+                me.BroadcastPlayers2(player, "huCards", me.lastThrowCard, me.lastThrowPlace);
+            }
+            // 新一局准备.
+            me.GameEnd();
+            me.CancelPlayerReady();
+            me.SendPlayerReady();
+        }break;
+        case enum_Gang: {
+            if (selfCheck) {
+                player.GangCards(me.cards[me.cardsIndex - 1], true);
+                me.BroadcastPlayers2(player, "gangCards", me.cards[me.cardsIndex - 1]);
+            }else {
+                player.GangCards(me.lastThrowCard, false);
+                me.BroadcastPlayers2(player, "gangCards", me.lastThrowCard, me.lastThrowPlace);
+            }
+            me.getCardPlace = player.place;
+            me.PlayeAddCard();
+        }break;
+        case enum_Peng: {
+            me.PlayerPengCards(player);
+        }break;
+        case enum_Niu: {
+            me.PlayerNiuCards(player);
+        }break;
+        case enum_Kan: {
+            me.PlayerKanCards(player);
+        }break;
+        case enum_Jiang : {
+            me.PlayerJiangCards(player);
+        }break;
+        case enum_Pass: {
+            if (selfCheck === false ) {
+                me.DoBackCardPlace();
+                me.PlayeAddCard();
+            }
+        }break;
+    }
+}
+
+/*
 Room.prototype.ProcessCheck = function() {
     var me = this;
     var checkCount = 0;
@@ -633,10 +684,9 @@ Room.prototype.ProcessCheck = function() {
     }
     
     if (checkCount === me.checks.length) {
-        
         // 客户全部选择完毕,此刻处理
         if (me.checks.length > 1) {
-            me.checks.sort(RoomSort(me));
+            me.checks.sort(RuleSort(me));
             GameLog("事件检测排序!", me.checks);
         }
         
@@ -646,51 +696,79 @@ Room.prototype.ProcessCheck = function() {
         var selfCheck = typeof checkEvent.selfCheck !== 'undefined'
         // 清除事件
         me.checks.splice(0, me.checks.length);
-        GameLog("---------------->ProcessCheck:" + select);
+        // 处理事件
+        me.ProcessEvent(place, select, selfCheck);
+    }
+}
+*/
+
+Room.prototype.ProcessCheck = function() {
+
+    function SimpleClone(src) {
+        var dst = {}
+        for (var key in src) {
+            dst[key] = src[key]
+        }
+        return dst;
+    }
+
+    function SelectMaxCheckEvent(checkEvent)
+    {
+        if (typeof checkEvent.select !== "undefined") {
+            return checkEvent.select;
+        }
+
+        if (typeof checkEvent.hu !== 'undefined') 
+            return enum_Hu;
+
+        if (typeof checkEvent.gang !== 'undefined') 
+            return enum_Gang;
+
+        if (typeof checkEvent.peng !== 'undefined') 
+            return enum_Peng;
+
+        if (typeof checkEvent.jiang !== 'undefined') 
+            return enum_Jiang;
+
+        if (typeof checkEvent.kan !== 'undefined') 
+            return enum_Kan;
+
+        if (typeof checkEvent.niu !== 'undefined') 
+            return enum_Niu;
+
+        return enum_Pass;
+    }
+
+    var me = this;
+    var cloneChecks = new Array();
+    var cloneCheckEvent = SimpleClone(me.checks);
+    var checkEvent;
+    for (var i = 0; i < me.checks.length; ++i) {
+        checkEvent = SimpleClone(me.checks[i]);
+        cloneChecks.push(checkEvent);
+        checkEvent.select = SelectMaxCheckEvent(checkEvent);
+    }
+    
+    // 客户全部选择完毕,此刻处理
+    if (cloneChecks.length > 0) {
+        cloneChecks.sort(RuleSort(me));
+        checkEvent = cloneChecks[0];
         
-        var player = me.players[place];
-        switch(select) {
-            case enum_Hu: {
-                GameLog("玩家" + player.nickName + "胡牌了");
-                if (selfCheck) {
-                    me.BroadcastPlayers2(player, "huCards", me.cards[me.cardsIndex - 1]);
-                }else {
-                    me.BroadcastPlayers2(player, "huCards", me.lastThrowCard, me.lastThrowPlace);
+        for (var i = 0; i < me.checks.length; ++i) {
+            if (checkEvent.place === me.checks[i].place) {
+                if (typeof me.checks[i].select !== 'undefined')
+                {
+                    var checkEvent = me.checks[i];
+                    var select = checkEvent.select;
+                    var place = checkEvent.place;
+                    var selfCheck = typeof checkEvent.selfCheck !== 'undefined'
+                    // 清除事件
+                    me.checks.splice(0, me.checks.length);
+                    // 处理事件
+                    me.ProcessEvent(place, select, selfCheck);
                 }
-                // 新一局准备.
-                me.GameEnd();
-                me.CancelPlayerReady();
-                me.SendPlayerReady();
-            }break;
-            case enum_Gang: {
-                if (selfCheck) {
-                    player.GangCards(me.cards[me.cardsIndex - 1], true);
-                    me.BroadcastPlayers2(player, "gangCards", me.cards[me.cardsIndex - 1]);
-                }else {
-                    player.GangCards(me.lastThrowCard, false);
-                    me.BroadcastPlayers2(player, "gangCards", me.lastThrowCard, me.lastThrowPlace);
-                }
-                me.getCardPlace = player.place;
-                me.PlayeAddCard();
-            }break;
-            case enum_Peng: {
-                me.PlayerPengCards(player);
-            }break;
-            case enum_Niu: {
-                me.PlayerNiuCards(player);
-            }break;
-            case enum_Kan: {
-                me.PlayerKanCards(player);
-            }break;
-            case enum_Jiang : {
-                me.PlayerJiangCards(player);
-            }break;
-            case enum_Pass: {
-                if (selfCheck === false ) {
-                    me.DoBackCardPlace();
-                    me.PlayeAddCard();
-                }
-            }break;
+                break;
+            }
         }
     }
 }
