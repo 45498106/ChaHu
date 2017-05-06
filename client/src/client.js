@@ -361,7 +361,6 @@ function NeedThrowCards(cardIndex) {
     if (game.playerSelf.place === game.getCardsPlace) {
         var index = parseInt(cardIndex);
         net.socket.emit('needThrowCard',  { "card" : game.playerSelf.cards[index] } );
-        ShowOperat(false,false,false,false,false,false);
     }
 }
 
