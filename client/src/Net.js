@@ -18,7 +18,8 @@ Net.prototype.Start = function(success, failure)
 {
     var heartbeatTime = new Date().getTime();
     var heartbeatHandler = null;
-    var socket = io('http://chahu.leanapp.cn');
+    //var socket = io('http://chahu.leanapp.cn');
+    var socket = io('http://localhost:18080');
     this.socket = socket;
     var net = this;
     
