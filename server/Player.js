@@ -8,10 +8,12 @@ function Player()
 
 }
 
-Player.prototype.Init = function(id, nickName, socket)
+Player.prototype.Init = function(uniqueID, id, name, headUrl, socket)
 {
+    this.uniqueID = uniqueID;
     this.id = id;
-    this.nickName = nickName;
+    this.name = name;
+    this.headUrl = headUrl;
     this.socket = socket;
     this.cards = null;              // 手牌
     this.pengCards = new Array();   // 已碰的牌

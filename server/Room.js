@@ -39,10 +39,18 @@ function Room()
     this.playing = false;
 }
 
-Room.prototype.Init = function(id)
+Room.prototype.Init = function(id, ruleId, quanId, hunCount)
 {
     this.id = id;
     this.roomName = "room:"+this.id;
+    this.ruleId = ruleId;
+    this.quanId = quanId;
+    this.hunCount = hunCount;
+    
+    // 创建时间
+    var now = (new Date()).getTime();
+    var time = Math.ceil(now / MinuteToMicroSecond);
+    this.time = time;
 }
 
 Room.prototype.GetFreePlace = function(id)
@@ -111,12 +119,11 @@ Room.prototype.AddPlayer = function(player)
 {
     var me = this;
     
-    var data = { "roomId" : me.id };
-    player.socket.emit('enterGameBack', data);
-    
+    //var data = { "roomId" : me.id };
+    //player.socket.emit('enterGameBack', data);
     
     player.socket.on('ready', function (data) {
-        if (me.playing === true) { return; }
+        if (me.playing === true) { GameLog("不合法的消息请求"); return; }
         player.ready = true;
         player.socket.emit('readyOk');
         
@@ -125,12 +132,12 @@ Room.prototype.AddPlayer = function(player)
     
     
     player.socket.on('unready', function (data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         player.ready = false;
     });
     
     player.socket.on('needThrowCard', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         var card = data.card;
         if (me.getCardPlace === player.place && me.checks.length === 0) {
             if(player.ThrowCard(card)) {
@@ -151,7 +158,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     player.socket.on('pengCards', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -167,7 +174,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     player.socket.on('gangCards', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -183,7 +190,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     player.socket.on('huCards', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -199,7 +206,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     player.socket.on('kanCards', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         GameLog("kanCards");
         var process = false;
         var checkEvent;
@@ -216,7 +223,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     player.socket.on('niuCards', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -232,7 +239,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     player.socket.on('jiangCards', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -248,12 +255,12 @@ Room.prototype.AddPlayer = function(player)
     });
     
     player.socket.on('piaoCards', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         
     });
     
     player.socket.on('passCards', function(data) {
-        if (me.playing === false) { return; }
+        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
         me.PlayerPassOperate(player);
     });
     
@@ -272,7 +279,7 @@ Room.prototype.AddPlayer = function(player)
     // 新一局准备
     me.SendPlayerReady();
    
-    GameLog(player.nickName + ' enter ' + me.roomName);
+    GameLog(player.name + ' enter ' + me.roomName);
 }
 
 Room.prototype.RemovePlayer = function(player)
@@ -288,8 +295,8 @@ Room.prototype.RemovePlayer = function(player)
         }
         me.CancelPlayerReady();
         
-        GameLog(player.nickName + ' leave ' + me.roomName);
-        GameLog("number of " + this.roomName +"'s player :", this.players.length);
+        GameLog(player.name + ' leave ' + me.roomName);
+        GameLog("number of " + this.roomName +"'s player :", this.GetPlayerCount());
     }
 }
 
@@ -748,7 +755,7 @@ Room.prototype.ProcessCheck = function() {
         cloneChecks.push(checkEvent);
         checkEvent.select = SelectMaxCheckEvent(checkEvent);
     }
-    
+
     // 客户全部选择完毕,此刻处理
     if (cloneChecks.length > 0) {
         cloneChecks.sort(RuleSort(me));

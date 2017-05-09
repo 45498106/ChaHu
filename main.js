@@ -7,6 +7,7 @@ var app = express();
 var http = require('http').Server(app);
 IO = require('socket.io')(http);
 
+Config = require('./config.js');
 Util = require("./common/Utility.js");
 GameLog = require('./common/Logger.js');
 
@@ -16,10 +17,18 @@ gameServer.Init();
 // 设置客户端根目录
 app.use(express.static(__dirname + "/client"));
 // 监听端口
-var port = 18080;
-http.listen( port, function() {
-    console.log('[DEBUG] Listening on *:' + port);
+var listenPort = Config.listenPort;
+http.listen( listenPort, function() {
+    console.log('[DEBUG] Listening on *:' + listenPort);
 });
+
+mysql = new (require("./mysql.js"))();
+var host = Config.db_host;
+var port = Config.db_port;
+var database = Config.db_database;
+var user = Config.db_user;
+var password = Config.db_password;
+mysql.Init(host, port, database, user, password);
 
 //--------------------------------------------------
 // 常量

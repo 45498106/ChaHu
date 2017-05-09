@@ -11,7 +11,7 @@
     "url": "git+https://github.com/Senecio/ChaHu.git"
   },
   "engines": {
-        "node": "4.x"
+    "node": "4.x"
   },
   "keywords": [
     "mahjong",
@@ -21,8 +21,9 @@
   ],
   "dependencies": {
     "express": "^4.13.4",
-    "socket.io": "^1.4.8",
-    "leanengine": "^1.0.0-beta"
+    "leanengine": "^1.0.0-beta",
+    "mysql": "^2.13.0",
+    "socket.io": "^1.4.8"
   },
   "author": "lsh",
   "license": "ISC",
