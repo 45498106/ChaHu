@@ -11,8 +11,8 @@ Config = require('./config.js');
 Util = require("./common/Utility.js");
 GameLog = require('./common/Logger.js');
 
-var gameServer = new (require('./server/GameServer.js'))();
-gameServer.Init();
+GameServer = new (require('./server/GameServer.js'))();
+GameServer.Init();
 
 // 设置客户端根目录
 app.use(express.static(__dirname + "/client"));
@@ -33,7 +33,7 @@ mysql.Init(host, port, database, user, password);
 //--------------------------------------------------
 // 常量
 //--------------------------------------------------
-var c_HeartbeatCheckMS = 1000;          //心跳检测毫秒数
+var c_HeartbeatCheckMS = 100000;          //心跳检测毫秒数
 var c_HeartbeatCheckTimeoutCount = 2;   //心跳检测超时数量
 
 //--------------------------------------------------
@@ -70,7 +70,7 @@ IO.on('connection', function (socket) {
         GameLog('Client [' + client.id + '] disconnected!');
 
         // 通知gameServer 删除client
-        gameServer.DeleteClient(client);
+        GameServer.DeleteClient(client);
         
         client.socket.broadcast.emit('clientDisconnect', { name: client.id  });
             
@@ -83,7 +83,7 @@ IO.on('connection', function (socket) {
     });
     
     // 通知gameServer 进入新client
-    gameServer.NewClient(client);
+    GameServer.NewClient(client);
 });
 
 // 检测客户心跳

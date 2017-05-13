@@ -4,6 +4,11 @@ if(typeof module !== 'undefined')
 var Player = require("./Player.js");
 var Mahjong = require("./Mahjong.js");
 
+var UserDB = require("./sql/userDB.js");
+var GameDB = require("./sql/gameDB.js");
+
+var MinuteToMicroSecond = 60000;
+
 var enum_Pass = 0;
 var enum_Niu = 1;
 var enum_Kan = 2;
@@ -24,10 +29,33 @@ var staticCards = new Array(11,11,11,11, 12,12,12,12, 13,13,13,13, 14,14,14,14, 
                             31,31,31,31, 32,32,32,32, 33,33,33,33, 34,34,34,34, 35,35,35,35, 36,36,36,36, 37,37,37,37, 38,38,38,38, 39,39,39,39, 
                             45,45,45,45, 46,46,46,46, 47,47,47,47);
 
+function PlayData()
+{
+    this.userId = 0;
+    this.userName = this.name;
+    this.userHeadUrl = this.headUrl;
+    this.offline = true;            // 离线
+    this.place = 0;
+    this.cards = null;              // 手牌
+    this.outputCards = new Array(); // 已经出的牌
+    this.pengCards = new Array();   // 已碰的牌
+    this.gangCards = new Array();   // 已杠的牌
+    this.kanCards = new Array();    // 已砍的牌
+    this.niuCards = new Array();    // 已牛的牌
+    this.jiangCards = new Array();  // 已将的牌
+    this.huCards = new Array();     // 可胡的牌
+    this.updateHucards = true;
+    this.isHuCards = false;
+    this.canNiu = false;
+    this.firstAdd = false;
+    this.piao = false;
+}
+
 function Room()
 {
     this.duration = 0;      // 持续时间
     this.players = [null, null, null, null]; // 玩家列表
+    this.playData = [null, null, null, null]; // 游戏数据
     
     this.cards = null; 
     this.cardsIndex = 0;
@@ -36,16 +64,21 @@ function Room()
     this.checks = new Array();
     this.lastThrowCard = 0;
     this.lastThrowPlace = 0;
-    this.playing = false;
+    this.played = false;    // 游戏已经开始
+    this.pause = false;     // 玩家离线,游戏暂停
+    this.state = 1;         // 摸牌状态
 }
 
-Room.prototype.Init = function(id, ruleId, quanId, hunCount)
+Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playCount, costMoney)
 {
     this.id = id;
     this.roomName = "room:"+this.id;
+    this.createUserId = createUserId;
     this.ruleId = ruleId;
     this.quanId = quanId;
     this.hunCount = hunCount;
+    this.playCount = playCount;
+    this.costMoney = costMoney;
     
     // 创建时间
     var now = (new Date()).getTime();
@@ -104,7 +137,7 @@ Room.prototype.PlayerPassOperate = function(player){
     var checkEvent;
     for (var i = 0; i < me.checks.length; ++i) {
         checkEvent = me.checks[i];
-        if (checkEvent.place === player.place) {
+        if (checkEvent.place === player.data.place) {
             checkEvent['select'] = enum_Pass;
             process = true;
             break;
@@ -114,35 +147,65 @@ Room.prototype.PlayerPassOperate = function(player){
     if (process) me.ProcessCheck();
 }
 
-
 Room.prototype.AddPlayer = function(player)
 {
     var me = this;
+
+    PROCESS_COCOS_SOCKETIO(player.socket, 'exitRoom', function (data) {
+        GameLog('exitRoom');
+        
+        if (typeof player.room === 'undefined') {
+            GameLog("没有加入房间");
+            return;
+        }
+        
+        me.BroadcastPlayers(null, "exitRoomBack", player.id);
+        
+        var clearRoom = false; 
+        if (me.createUserId === player.id) {
+            for (var i = 0; i < me.players.length; ++i) {
+                if (me.players[i]) {
+                    GameDB.UpdateRoomData(me.players[i].id, {});
+                    me.RemovePlayer(me.players[i], false);
+                }
+            }
+            clearRoom = true;
+        }
+        else {
+            GameDB.UpdateRoomData(player.id, {});
+            me.RemovePlayer(player);
+        }
+        
+        if (clearRoom) {
+            delete GameServer[me.id];
+        }
+    });
     
-    //var data = { "roomId" : me.id };
-    //player.socket.emit('enterGameBack', data);
-    
-    player.socket.on('ready', function (data) {
-        if (me.playing === true) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'ready', function (data) {
+        GameLog('ready');
+        if (me.played === true) { GameLog("不合法的消息请求"); return; }
         player.ready = true;
-        player.socket.emit('readyOk');
+        me.BroadcastPlayers(null, "readyOk", player.place);
         
         me.CheckAllReady();
     });
     
     
-    player.socket.on('unready', function (data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'unready', function (data) {
+        if (me.played === true) { GameLog("不合法的消息请求"); return; }
         player.ready = false;
     });
     
-    player.socket.on('needThrowCard', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'needThrowCard', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var card = data.card;
-        if (me.getCardPlace === player.place && me.checks.length === 0) {
+        if (me.getCardPlace === player.data.place && me.checks.length === 0) {
             if(player.ThrowCard(card)) {
+                // 打牌状态
+                me.state = 2;
+
                 me.lastThrowCard = card;
-                me.lastThrowPlace = player.place;
+                me.lastThrowPlace = player.data.place;
                 me.BroadcastPlayers2(player, "throwCard", data.card);
                 
                 // 检测碰,杠,胡.
@@ -157,13 +220,13 @@ Room.prototype.AddPlayer = function(player)
         }
     });
     
-    player.socket.on('pengCards', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'pengCards', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
             checkEvent = me.checks[i];
-            if (checkEvent.place === player.place && typeof checkEvent.peng !== 'undefined') {
+            if (checkEvent.place === player.data.place && typeof checkEvent.peng !== 'undefined') {
                 checkEvent['select'] = enum_Peng;
                 process = true;
                 break;
@@ -173,13 +236,13 @@ Room.prototype.AddPlayer = function(player)
         if (process) me.ProcessCheck();
     });
     
-    player.socket.on('gangCards', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'gangCards', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
             checkEvent = me.checks[i];
-            if (checkEvent.place === player.place && typeof checkEvent.gang !== 'undefined') {
+            if (checkEvent.place === player.data.place && typeof checkEvent.gang !== 'undefined') {
                 checkEvent['select'] = enum_Gang;
                 process = true;
                 break;
@@ -189,13 +252,13 @@ Room.prototype.AddPlayer = function(player)
         if (process) me.ProcessCheck();
     });
     
-    player.socket.on('huCards', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'huCards', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
             checkEvent = me.checks[i];
-            if (checkEvent.place === player.place && typeof checkEvent.hu !== 'undefined') {
+            if (checkEvent.place === player.data.place && typeof checkEvent.hu !== 'undefined') {
                 checkEvent['select'] = enum_Hu;
                 process = true;
                 break;
@@ -205,14 +268,14 @@ Room.prototype.AddPlayer = function(player)
         if (process) me.ProcessCheck();
     });
     
-    player.socket.on('kanCards', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'kanCards', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         GameLog("kanCards");
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
             checkEvent = me.checks[i];
-            if (checkEvent.place === player.place && typeof checkEvent.kan !== 'undefined') {
+            if (checkEvent.place === player.data.place && typeof checkEvent.kan !== 'undefined') {
                 checkEvent['select'] = enum_Kan;
                 process = true;
                 break;
@@ -222,13 +285,13 @@ Room.prototype.AddPlayer = function(player)
         if (process) me.ProcessCheck();
     });
     
-    player.socket.on('niuCards', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'niuCards', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
             checkEvent = me.checks[i];
-            if (checkEvent.place === player.place && typeof checkEvent.niu !== 'undefined') {
+            if (checkEvent.place === player.data.place && typeof checkEvent.niu !== 'undefined') {
                 checkEvent['select'] = enum_Niu;
                 process = true;
                 break;
@@ -238,13 +301,13 @@ Room.prototype.AddPlayer = function(player)
         if (process) me.ProcessCheck();
     });
     
-    player.socket.on('jiangCards', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'jiangCards', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
             checkEvent = me.checks[i];
-            if (checkEvent.place === player.place && typeof checkEvent.jiang !== 'undefined') {
+            if (checkEvent.place === player.data.place && typeof checkEvent.jiang !== 'undefined') {
                 checkEvent['select'] = enum_Jiang;
                 process = true;
                 break;
@@ -254,46 +317,89 @@ Room.prototype.AddPlayer = function(player)
         if (process) me.ProcessCheck();
     });
     
-    player.socket.on('piaoCards', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'piaoCards', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         
     });
     
-    player.socket.on('passCards', function(data) {
-        if (me.playing === false) { GameLog("不合法的消息请求"); return; }
+    PROCESS_COCOS_SOCKETIO(player.socket, 'passCards', function(data) {
+        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         me.PlayerPassOperate(player);
     });
     
-    // 设置自己位子
-    player.place = me.GetFreePlace();
-    // 先通知自己创建自己的单位
-    player.socket.emit("newPlayer", Player.prototype.SendNewPlayer(player, true));
-    // 再通知其他玩家加入新玩家
-    me.BroadcastPlayers(player, "newPlayer");  
-    // 再自己创建其他玩家
-    me.SendPlayersTo(player);
+    if (false === me.played) {
+        // 设置自己位子
+        player.place = me.GetFreePlace();
+        // 先通知自己创建自己的单位
+        player.socket.emit("newPlayer", Player.prototype.SendNewPlayer(player, true));
+        // 再通知其他玩家加入新玩家
+        me.BroadcastPlayers(player, "newPlayer");  
+        // 再自己创建其他玩家
+        me.SendPlayersTo(player);
+    }
+    else {
+       for (var pi = 0; pi < 4; ++pi) {
+            if (this.playData[pi].userId === player.id) {
+                player.place = this.playData[pi].place;
+                player.AttachData(this.playData[pi]);
+                break;
+            }
+        }
+
+        // 发送牌数据.
+        me.SendSendPlayersByReconnection(player);
+        // 广播玩家上线.
+        me.BroadcastPlayers(null, "playerReconnection", player.place);  
+
+        var allOnline = true;
+        for (var gi = 0; gi < 4; ++gi) {
+            if (this.playData[gi].offline === true) {
+                allOnline = false;
+                break;
+            }
+        }
+        
+        if (allOnline) {
+            me.pause = false;
+            GameLog(player.name + "重新加入,游戏开始!");
+        }
+    }
 
     player.socket.join(me.roomName);
     me.players[player.place] = player;
     
-    // 新一局准备
-    me.SendPlayerReady();
+    if (false === me.played) {
+        // 新一局准备
+        me.SendPlayerReady();
+    }
    
     GameLog(player.name + ' enter ' + me.roomName);
 }
 
-Room.prototype.RemovePlayer = function(player)
+Room.prototype.RemovePlayer = function(player, noBroadcast)
 {
     var me = this;
     var place = player.place;
     if (place >= 0) {
         player.socket.leave(this.roomName);
-        this.BroadcastPlayers(player, "losePlayer");
-        this.players[place] = null;
-        if (me.playing) {
-            me.GameStop();
+        
+        if (typeof noBroadcast === 'undefined') {
+            if (me.played) {
+                this.BroadcastPlayers(player, "playerOffline", player.place);
+            }else {
+                this.BroadcastPlayers(player, "losePlayer");
+            }
         }
-        me.CancelPlayerReady();
+
+        this.players[place] = null;
+        player.room = null;
+        if (me.played) {
+            me.playData[place].offline = true;
+            me.pause = true;
+        }
+        else {
+            me.CancelPlayerReady();
+        }
         
         GameLog(player.name + ' leave ' + me.roomName);
         GameLog("number of " + this.roomName +"'s player :", this.GetPlayerCount());
@@ -320,6 +426,14 @@ Room.prototype.BroadcastPlayers = function(who, action, argument)
         IO.to(this.roomName).emit(action, argument);
     }else if(action === "ready") {
         IO.to(this.roomName).emit(action);
+    }else if(action === 'exitRoomBack') {
+        IO.to(this.roomName).emit(action, argument);
+    }else if (action === 'readyOk') {
+        IO.to(this.roomName).emit(action, argument);
+    }else if (action === 'playerReconnection') {
+        IO.to(this.roomName).emit(action, argument);
+    }else if (action === 'playerOffline') {
+        IO.to(this.roomName).emit(action, argument);
     }
 }
 
@@ -332,7 +446,7 @@ Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
         if (player === null) continue;
         
         if(action === "initCards") {
-            player.socket.emit(action, Player.prototype.SendInitCards(who, player.place === who.place));
+            player.socket.emit(action, Player.prototype.SendInitCards(who, player.data.place === who.data.place));
         }else if(action === "getCard") {
             player.socket.emit(action, Player.prototype.SendGetCard(who, argument, player));
         }else if(action === "throwCard") {
@@ -368,6 +482,36 @@ Room.prototype.SendPlayersTo = function(who)
     }
     if (datas.length > 0) {
         who.socket.emit("playerList", datas);
+    }
+}
+
+Room.prototype.SendSendPlayersByReconnection = function(who)
+{
+    var roomInfo = {
+        "bankerPlace" : this.bankerPlace, 
+        "playCount" : this.playCount,
+        "getCardPlace" : this.getCardPlace
+    }
+   
+    var state = {};    
+    if (this.state === 1) {
+        state.type = 1;
+        state.getCardPlace = this.getCardPlace;
+        state.getCard = this.cards[this.cardsIndex - 1];
+    }else {
+        state.type = 2;
+        state.lastThrowPlace = this.lastThrowPlace;
+        state.lastThrowCard = this.lastThrowCard;
+    }
+    
+    var playerData = null;
+    var datas = [];
+    for (var i = 0; i < this.playData.length; ++i) {
+        playerData = this.playData[i];
+        datas.push(Player.prototype.SendPlayerInfoByReconnection(playerData, state, who));
+    }
+    if (datas.length > 0) {
+        who.socket.emit("resumeGame", { roomInfo : roomInfo, playerList : datas });
     }
 }
 
@@ -426,21 +570,47 @@ Room.prototype.FixCards = function() {
     }
 }
 
-
 // 新一局游戏
 Room.prototype.NewGame = function() 
 {
     this.cards = staticCards.slice();
     this.cardsIndex = 0;
-    this.playing = true;
+    this.played = true;
+    this.pause = false;
     this.checks.splice(0, this.checks.length);
+    
+    // 生成游戏数据
+    for (var pi = 0; pi < this.playData.length; ++pi) {
+        if (this.playData[pi] === null) {
+            this.playData[pi] = new PlayData();
+            this.players[pi].AttachData(this.playData[pi]);
+        }
+    }
+    
+    if (this.costMoney === 0) {
+        // 如果没有扣钱,在这里扣钱
+        this.costMoney = 1;
+    }
     
     this.RandomCards();
     //this.FixCards();
     
     this.bankerPlace = 0;
+    // 测试
+    /*for (var p = 0; p < 4; ++p) {
+        if (this.players[p].id === this.createUserId) {
+            if (p === 0) {
+                this.bankerPlace = 3;
+            }else {
+                this.bankerPlace = p - 1;
+            }
+            break;
+        }
+    }*/
+    
     //this.bankerPlace = Util.RandomRange(0, 3);
-    this.BroadcastPlayers(null, "newGame", { "bankerPlace" : this.bankerPlace });
+    this.BroadcastPlayers(null, "newGame", { "bankerPlace" : this.bankerPlace, 
+                    "playCount" : this.playCount, "played" : 1 });
     
     // 发牌
     var initCards = new Array(13);
@@ -473,6 +643,8 @@ Room.prototype.DoBackCardPlace = function() {
 }
 
 Room.prototype.PlayeAddCard = function() {
+    // 摸牌状态
+    this.state = 1;
     if (this.cardsIndex + 1 == this.cards.length) {
         // 流局
         Room.GameStop();
@@ -480,7 +652,7 @@ Room.prototype.PlayeAddCard = function() {
         var player = this.players[this.getCardPlace];
         var card = this.cards[this.cardsIndex++];
 
-        if (player.niuCards.length > 0 && 
+        if (player.data.niuCards.length > 0 && 
            (card === 45 || card === 46 || card === 47))
         {
             // 补牛
@@ -502,33 +674,33 @@ Room.prototype.PlayeAddCard = function() {
             
             player.AddCard(card);
             var checkEvent = null;
-            if (Mahjong.HasGangCardsByHand(player.cards) ||
-                Mahjong.HasGangCards(player.cards, card) || 
-                Mahjong.CanGangCards(player.kanCards, card)) {
+            if (Mahjong.HasGangCardsByHand(player.data.cards) ||
+                Mahjong.HasGangCards(player.data.cards, card) || 
+                Mahjong.CanGangCards(player.data.kanCards, card)) {
                 if (checkEvent === null) {
-                    checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+                    checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
                 }
                 checkEvent.gang = 1;
             }
             
-            if (Mahjong.HasKanCardsByHand(player.cards) || 
-                Mahjong.HasKanCards(player.cards, card) ) {
+            if (Mahjong.HasKanCardsByHand(player.data.cards) || 
+                Mahjong.HasKanCards(player.data.cards, card) ) {
                 if (checkEvent === null) {
-                    checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+                    checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
                 }
                 checkEvent.kan = 1;
             }
             
-            if (player.canNiu) {
+            if (player.data.canNiu) {
                 if (checkEvent === null) {
-                    checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+                    checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
                 }
                 checkEvent.niu = 1;
             }
             
-            if (player.isHuCards) {
+            if (player.data.isHuCards) {
                 if (checkEvent === null) {
-                    checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+                    checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
                 }
                 checkEvent.hu = 1;
             }
@@ -549,35 +721,35 @@ Room.prototype.ThrowCardCheck = function(player, card) {
     var checkEvent;
     for (var i = 0; i < 4; ++i) {
         otherPlayer = this.players[i];
-        if (otherPlayer.place === player.place)
+        if (otherPlayer.data.place === player.data.place)
             continue;
             
         checkEvent = null;
-        if (Mahjong.CanPengCards(otherPlayer.cards, card)) {
+        if (Mahjong.CanPengCards(otherPlayer.data.cards, card)) {
             if (checkEvent === null) {
-                checkEvent = { 'place' : otherPlayer.place, 'throwCheck' : 1};
+                checkEvent = { 'place' : otherPlayer.data.place, 'throwCheck' : 1};
             }
             checkEvent.peng = 1;
         }
         
-        if (Mahjong.CanGangCards(otherPlayer.cards, card) ||
-            Mahjong.CanGangCards(player.kanCards, card)) {
+        if (Mahjong.CanGangCards(otherPlayer.data.cards, card) ||
+            Mahjong.CanGangCards(player.data.kanCards, card)) {
             if (checkEvent === null) {
-                checkEvent = { 'place' : otherPlayer.place, 'throwCheck' : 1};
+                checkEvent = { 'place' : otherPlayer.data.place, 'throwCheck' : 1};
             }
             checkEvent.gang = 1;
         }
         
         // 将牌
         if (1) {
-            var nextPlace = player.place + 1;
+            var nextPlace = player.data.place + 1;
             if (nextPlace === 4) { 
                 nextPlace = 0; 
             }
             
-            if (otherPlayer.place === nextPlace && otherPlayer.CanJiangCards(card)) {
+            if (otherPlayer.data.place === nextPlace && otherPlayer.CanJiangCards(card)) {
                 if (checkEvent === null) {
-                    checkEvent = { 'place' : otherPlayer.place, 'throwCheck' : 1};
+                    checkEvent = { 'place' : otherPlayer.data.place, 'throwCheck' : 1};
                 }
                 checkEvent.jiang = 1;
             }
@@ -587,7 +759,7 @@ Room.prototype.ThrowCardCheck = function(player, card) {
         for (var j = 0; j < huCards.length; ++j) {
             if (huCards[j] === card) {
                 if (checkEvent === null) {
-                    checkEvent = { 'place' : otherPlayer.place, 'throwCheck' : 1};
+                    checkEvent = { 'place' : otherPlayer.data.place, 'throwCheck' : 1};
                 }
                 checkEvent.hu = 1;
                 break;
@@ -654,11 +826,13 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
                 player.GangCards(me.lastThrowCard, false);
                 me.BroadcastPlayers2(player, "gangCards", me.lastThrowCard, me.lastThrowPlace);
             }
-            me.getCardPlace = player.place;
+            me.getCardPlace = player.data.place;
             me.PlayeAddCard();
+            me.RemoveLastOneInPlayerOutputCards();
         }break;
         case enum_Peng: {
             me.PlayerPengCards(player);
+            me.RemoveLastOneInPlayerOutputCards();
         }break;
         case enum_Niu: {
             me.PlayerNiuCards(player);
@@ -668,6 +842,7 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
         }break;
         case enum_Jiang : {
             me.PlayerJiangCards(player);
+            me.RemoveLastOneInPlayerOutputCards();
         }break;
         case enum_Pass: {
             if (selfCheck === false ) {
@@ -783,30 +958,30 @@ Room.prototype.ProcessCheck = function() {
 Room.prototype.TriggerSelfChack = function(player)
 {
     var checkEvent = null;
-    if (Mahjong.HasGangCardsByHand(player.cards)) {
+    if (Mahjong.HasGangCardsByHand(player.data.cards)) {
         if (checkEvent === null) {
-            checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+            checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
         }
         checkEvent.gang = 1;
     }
     
-    if (Mahjong.HasKanCardsByHand(player.cards)) {
+    if (Mahjong.HasKanCardsByHand(player.data.cards)) {
         if (checkEvent === null) {
-            checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+            checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
         }
         checkEvent.kan = 1;
     }
     
-    if (player.canNiu) {
+    if (player.data.canNiu) {
         if (checkEvent === null) {
-            checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+            checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
         }
         checkEvent.niu = 1;
     }
 
-    if (player.isHuCards) {
+    if (player.data.isHuCards) {
         if (checkEvent === null) {
-            checkEvent = { 'place' : player.place, 'selfCheck' : 1 };
+            checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
         }
         checkEvent.hu = 1;
     }
@@ -826,7 +1001,7 @@ Room.prototype.PlayerPengCards = function (player) {
     // 通知
     this.BroadcastPlayers2(player, "pengCards", this.lastThrowCard, this.lastThrowPlace);
     // 改变出牌位置
-    this.getCardPlace = player.place;
+    this.getCardPlace = player.data.place;
 }
 
 Room.prototype.PlayerJiangCards = function (player) {
@@ -835,7 +1010,7 @@ Room.prototype.PlayerJiangCards = function (player) {
     // 通知
     this.BroadcastPlayers2(player, "jiangCards", this.lastThrowCard, this.lastThrowPlace);
     // 改变出牌位置
-    this.getCardPlace = player.place;
+    this.getCardPlace = player.data.place;
 }
 
 Room.prototype.PlayerKanCards = function (player) {
@@ -851,7 +1026,7 @@ Room.prototype.PlayerNiuCards = function (player) {
     // 玩家碰牌
     var countArray = [];
     var c = 0;
-    Mahjong.HasNiuCardsByHand(player.cards, countArray);
+    Mahjong.HasNiuCardsByHand(player.data.cards, countArray);
     var i;
     for (i = 0; i < countArray.length; ++i) {
         c += countArray[i];
@@ -870,10 +1045,46 @@ Room.prototype.PlayerNiuCards = function (player) {
     this.BroadcastPlayers2(player, "niuCards", addCards);
 }
 
-Room.prototype.GameEnd = function() {
-    this.playing = false;
+Room.prototype.RemoveLastOneInPlayerOutputCards = function() {
+    var card = this.lastThrowCard;
+    var place = this.lastThrowPlace;
+    var me = this;
+    var player = me.players[place];
+    player.data.outputCards.pop();
 }
 
-Room.prototype.GameStop = function() {
-    this.playing = false;
+Room.prototype.GameEnd = function() {
+    this.played = false;
+    ++this.playCount;
+    
+    // 写入记录到数据库
+    GameDB.UpdateRoomData(this.createUserId, Room.prototype.DBSaveRoomInfo(this));
+}
+
+Room.prototype.SendRoomInfo = function(room) {
+    
+    var data = {    "id"                : room.id,
+                    "ownerId"           : room.createUserId,
+                    "time"              : room.time,
+                    "ruleId"            : room.ruleId,
+                    "quanId"            : room.quanId,
+                    "hunCount"          : room.hunCount,
+                    "playCount"         : room.playCount,
+                    "played"            : room.played ? 1 : 0 };
+    
+    return JSON.stringify(data);
+}
+
+Room.prototype.DBSaveRoomInfo = function(room) {
+    
+    var data = {    "id"                : room.id,
+                    "ownerId"           : room.createUserId,
+                    "time"              : room.time,
+                    "ruleId"            : room.ruleId,
+                    "quanId"            : room.quanId,
+                    "hunCount"          : room.hunCount,
+                    "playCount"         : room.playCount,
+                    "costMoney"         : room.costMoney};
+    
+    return data;
 }

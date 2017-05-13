@@ -9,6 +9,29 @@ var GameDB = require("./sql/gameDB.js");
 
 var MinuteToMicroSecond = 60000;
 
+
+PROCESS_COCOS_SOCKETIO = function(socket, eventName, func) {
+    socket.on(eventName, function(data){
+        if (typeof data === "object") {
+            func(data);
+        }else if (typeof data === "string") {
+            try {
+                if (data !== "") {
+                    var dataObj = JSON.parse(data);
+                    func(dataObj);
+                }
+                else {
+                    func();
+                }
+            }catch(e) {
+                GameLog("解析soocket.io 数据错误" + e + " eventName:" + eventName + " data:", data);
+            }
+        }else {
+            GameLog("invlid soocket.io data:", data);
+        }
+    });
+}
+
 function GameServer()
 {
     this.rooms = {};
@@ -44,7 +67,7 @@ GameServer.prototype.NewClient = function(client)
     var socket = client.socket;
     var server = this;
     
-    socket.on('enterGame', function (data) {
+    PROCESS_COCOS_SOCKETIO(socket, 'enterGame', function (data) {
         // 登录游戏
         if (typeof client.player !== 'undefined') {
             GameLog(socket.id + "repeat enterGame");
@@ -79,6 +102,13 @@ GameServer.prototype.NewClient = function(client)
                     userHeadHurl = headUrl;
                     UserDB.UpdateUserInfo(uniqueID, userName, userHeadHurl);
                 }
+                
+                // TODO:测试用的. 正式版不用
+                GameDB.GetUserData(userId, function(result, dbData){
+                    if (result === false) {
+                        GameDB.InitForNewUser(userId);
+                    }
+                });
                 
                 socket.emit('enterGameBack',  data);
                 
@@ -127,7 +157,7 @@ GameServer.prototype.NewClient = function(client)
         });
     });
     
-    socket.on('createRoom', function (data) {
+    PROCESS_COCOS_SOCKETIO(socket, 'createRoom', function (data) {
         // 创建房间
         if (typeof client.player === 'undefined') {
             return;
@@ -140,15 +170,16 @@ GameServer.prototype.NewClient = function(client)
         
         GameDB.GetUserData(userId, function(result, dbData){
             if (result === false) {
+                GameLog("不合法的消息请求");
                 return;
             }
             
             var roomCard = dbData.roomCard;
-            var roomData = dbData.roomData;
+            var roomData = JSON.parse(dbData.roomData);
             
-            if (typeof roomData.roomId !== 'undefined') {
+            if (typeof roomData.id !== 'undefined') {
                 var now = new Date(roomData.time * MinuteToMicroSecond);
-                GameLog("重复创建房间, 已有roomId=", roomData.roomId);
+                GameLog("重复创建房间, 已有roomId=", roomData.id);
                 GameLog("已创建房间时间", now);
                 return;
             }
@@ -191,14 +222,13 @@ GameServer.prototype.NewClient = function(client)
 
             var rs =  server.CreateRoom(client.player, ruleId, quanId, hunCount);
             if (rs) {
-                var roomId = client.player.room.id;
-                var time = client.player.room.time;
-                GameDB.UpdateRoomData(userId, {roomId : roomId, time:time, ruleId : ruleId, quanId : quanId, hunCount : hunCount});
+                GameDB.UpdateRoomData(userId, Room.prototype.DBSaveRoomInfo(client.player.room));
             }
         });
     });
     
-    socket.on('joinRoom', function (data) {
+    PROCESS_COCOS_SOCKETIO(socket, 'joinRoom', function (data) {
+        GameLog('joinRoom');
         // 加入房间
         if (typeof client.player === 'undefined') {
             GameLog("不合法的消息请求");
@@ -206,10 +236,10 @@ GameServer.prototype.NewClient = function(client)
         }
         
         var roomId = data.roomId;
-        server.AddToRoom(client.player, roomId);
+        server.JoinRoom(client.player, roomId);
     });
     
-    socket.on('getRoomRecord', function (data) {
+    PROCESS_COCOS_SOCKETIO(socket, 'getRoomRecord', function (data) {
         // 加入房间
         if (typeof client.player === 'undefined') {
             GameLog("不合法的消息请求");
@@ -224,9 +254,9 @@ GameServer.prototype.NewClient = function(client)
             }
             
             var roomCard = dbData.roomCard;
-            var roomData = JSON.parse(dbData.roomData);
+            var roomDataJSON = dbData.roomData;
             
-            socket.emit('getRoomRecordBack', { roomCard : roomCard, roomData : roomData});
+            socket.emit('getRoomRecordBack', { roomCard : roomCard, roomData : roomDataJSON } );
         });
     });
 }
@@ -264,13 +294,13 @@ GameServer.prototype.CreateRoom = function(player, ruleId, quanId, hunCount)
         return false;
     }
     
+    var userId = player.id;
     var room = new Room();
-    room.Init(roomId, ruleId, quanId, hunCount);
+    room.Init(roomId, userId, ruleId, quanId, hunCount, 0, 0);
     this.rooms[roomId] = room;
-    
-    var time = room.time;
+   
     // 发送创建成功.
-    player.socket.emit('createRoomBack', {roomId : roomId, time:time, ruleId : ruleId, quanId : quanId, hunCount : hunCount});
+    player.socket.emit('createRoomBack', Room.prototype.SendRoomInfo(room));
    
     // 添加玩家
     room.AddPlayer(player);
@@ -279,16 +309,79 @@ GameServer.prototype.CreateRoom = function(player, ruleId, quanId, hunCount)
     return true;
 }
 
-GameServer.prototype.AddToRoom = function(player, roomId)
+GameServer.prototype.JoinRoom = function(player, roomId)
 {
+    GameLog(roomId);
     var room = null;
+    var self = this;
+    var userId = player.id;
     if (typeof this.rooms[roomId] === 'undefined' ||
         this.rooms[roomId] === null) {
-        GameLog("加入房间失败.找不到roomId", roomId);
+        GameDB.GetUserData(userId, function(result, dbData){
+            if (result === false) {
+                return;
+            }
+            
+            var roomData = JSON.parse(dbData.roomData);
+            if (typeof roomData.id === 'number' &&
+                roomData.id === roomId && 
+                roomData.ownerId === userId) {
+                
+                var ruleId = roomData.ruleId;
+                var quanId = roomData.quanId;
+                var hunCount = roomData.hunCount;
+                var playCount = roomData.playCount;
+                var costMoney = roomData.costMoney;
+                
+                room = new Room();
+                room.Init(roomId, userId, ruleId, quanId, hunCount, playCount, costMoney);
+                room.time = roomData.time;
+                self.rooms[roomId] = room;
+                
+                // 响应消息
+                player.socket.emit('joinRoomBack', Room.prototype.SendRoomInfo(room));
+                
+                // 添加玩家
+                room.AddPlayer(player);
+                player.room = room;
+            }
+            else {
+                GameLog("房间不存在!");
+                return;
+            }
+        });
         return;
-    }  
-    room = this.rooms[roomId];
-    // 添加玩家
-    room.AddPlayer(player);
-    player.room = room;
+    }
+    else {
+        room = this.rooms[roomId];
+        
+        if (room.GetPlayerCount() === room.players.length) {
+            // 人数已满!
+            GameLog("房间人数已满!");
+            GameDB.GetUserData(userId, function(result, dbData){
+                if (result === false) {
+                    return;
+                }
+            
+                var roomData = JSON.parse(dbData.roomData);
+                if (typeof roomData.id === 'number' &&
+                    roomData.id === roomId) 
+                {
+                    GameDB.UpdateRoomData(userId, {});
+                    GameLog("清空玩家数据记录");
+                }
+            });
+            return;
+        }
+        
+        // 响应消息
+        player.socket.emit('joinRoomBack', Room.prototype.SendRoomInfo(room));
+        
+        // 添加玩家
+        room.AddPlayer(player);
+        player.room = room;
+        
+        // 写入记录到数据库
+        GameDB.UpdateRoomData(userId, Room.prototype.DBSaveRoomInfo(room));
+    }
 }
