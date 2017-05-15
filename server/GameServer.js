@@ -324,9 +324,9 @@ GameServer.prototype.JoinRoom = function(player, roomId)
             
             var roomData = JSON.parse(dbData.roomData);
             if (typeof roomData.id === 'number' &&
-                roomData.id === roomId && 
-                roomData.ownerId === userId) {
+                roomData.id === roomId) {
                 
+                var ownerId = roomData.ownerId;
                 var ruleId = roomData.ruleId;
                 var quanId = roomData.quanId;
                 var hunCount = roomData.hunCount;
@@ -334,7 +334,7 @@ GameServer.prototype.JoinRoom = function(player, roomId)
                 var costMoney = roomData.costMoney;
                 
                 room = new Room();
-                room.Init(roomId, userId, ruleId, quanId, hunCount, playCount, costMoney);
+                room.Init(roomId, ownerId, ruleId, quanId, hunCount, playCount, costMoney);
                 room.time = roomData.time;
                 self.rooms[roomId] = room;
                 

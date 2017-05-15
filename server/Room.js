@@ -498,10 +498,12 @@ Room.prototype.SendSendPlayersByReconnection = function(who)
         state.type = 1;
         state.getCardPlace = this.getCardPlace;
         state.getCard = this.cards[this.cardsIndex - 1];
-    }else {
+    }else if (this.state === 2){
         state.type = 2;
         state.lastThrowPlace = this.lastThrowPlace;
         state.lastThrowCard = this.lastThrowCard;
+    }else if (state.type === 3) {
+        roomInfo.accounts = 1;
     }
     
     var playerData = null;
@@ -1054,6 +1056,7 @@ Room.prototype.RemoveLastOneInPlayerOutputCards = function() {
 }
 
 Room.prototype.GameEnd = function() {
+    this.state = 3; // 结算状态
     this.played = false;
     ++this.playCount;
     
