@@ -1,6 +1,85 @@
 // 18:30 2017/3/22
 // create by lsh
 
+
+function SocketProxy(ws) {
+    this.interest = {};
+    this.ws = ws;
+}
+
+SocketProxy.prototype.Init = function() {
+    
+    // 连接成功建立的回调方法
+    this.ws.onopen = function(self){
+        return function(event) {
+            if (typeof self.interest === 'object' && typeof self.interest['connect'] === 'function') {
+                self.interest['connect'](event);
+            }
+        }
+    }(this);
+    
+    // 连接发生错误的回调方法
+    this.ws.onerror = function(self){
+        return function(event) {
+            if (typeof self.interest === 'object' && typeof self.interest['error'] === 'function') {
+                self.interest['error'](event);
+            }
+        }
+    }(this);
+    
+    // 连接关闭的回调方法
+    this.ws.onclose = function(self){
+        return function(event) {
+            if (typeof self.interest === 'object' && typeof self.interest['disconnect'] === 'function') {
+                self.interest['disconnect'](event);
+            }
+        }
+    }(this);
+    
+    // 接收到消息的回调方法
+    this.ws.onmessage = function(self) {
+        return function(event) {
+            if (typeof self.interest === 'object' && typeof event.data === 'string') {
+                if (typeof self.interest[event.data] === 'function') {
+                    self.interest[event.data]();
+                }
+                else {
+                    try {
+                        console.log(event.data);
+                        var obj = JSON.parse(event.data);
+                        if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
+                            self.interest[obj.event](obj.data);
+                        }
+                    } catch (e) {
+                        console.log(e);
+                    }
+                }
+            }
+            
+        }
+    }(this);
+}
+
+SocketProxy.prototype.on = function(event, func) {
+    this.interest[event] = func;
+}
+
+SocketProxy.prototype.disconnect = function() {
+    this.ws.terminate();
+}
+
+SocketProxy.prototype.emit = function(event, data) {
+    var pack = { event : event };
+    if (typeof data !== 'undefined' && data !== null) pack.data = data;
+    this.ws.send(JSON.stringify(pack));
+}
+
+SocketProxy.prototype.send = function(event) {
+    if (typeof event === 'string') {
+        this.ws.send(event);
+    }
+}
+
 var Socket = function() {
     this.init = false;
 }
@@ -27,16 +106,19 @@ Socket.prototype.Connect =  function (address, port, router)
     
     try {
         
-        var socket = io.connect("http://" + address + ":" + port + "/" + (typeof router !== "undefined" ? router : ""));
-        self.socket = socket;
-        
+        var webSocket = new WebSocket("ws://" + address + ":" + port + "/" + (typeof router !== "undefined" ? router : ""));
+        //var socket = io.connect("http://" + address + ":" + port + "/" + (typeof router !== "undefined" ? router : ""));
+        self.socket = new SocketProxy(webSocket);
+        var socket = self.socket;
+        socket.Init();
+    
         var heartbeatTime = new Date().getTime();
         var heartbeatHandler = setInterval(function() {
             heartbeatTime = new Date().getTime();
             if (self.socket && self.connected === true) {
                 self.socket.emit('heartbeat');
             }
-        }, 1000);
+        }, 100000);
 
         socket.on('clientJoin', function(data) {
             //AppendText(data.name + " client 加入.");

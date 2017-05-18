@@ -12,7 +12,7 @@ var MinuteToMicroSecond = 60000;
 
 PROCESS_COCOS_SOCKETIO = function(socket, eventName, func) {
     socket.on(eventName, function(data){
-        if (typeof data === "object") {
+        if (typeof data === "object" || typeof data === 'undefined') {
             func(data);
         }else if (typeof data === "string") {
             try {

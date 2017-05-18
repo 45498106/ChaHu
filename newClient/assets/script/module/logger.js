@@ -16,7 +16,7 @@ var Logger = function ()
     }
     
     if (typeof this.socket !== 'undefined' && this.socket.connected === true) {
-        this.socket.emit("Log", args);
+        this.socket.send(JSON.stringify(args));
     }
 }
 

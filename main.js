@@ -4,8 +4,8 @@
 
 var express = require('express');
 var app = express();
-var http = require('http').Server(app);
-IO = require('socket.io')(http);
+var expressWs = require('express-ws')(app);
+//IO = require('socket.io')(http);
 
 Config = require('./config.js');
 Util = require("./common/Utility.js");
@@ -18,7 +18,7 @@ GameServer.Init();
 app.use(express.static(__dirname + "/client"));
 // 监听端口
 var listenPort = Config.listenPort;
-http.listen( listenPort, function() {
+app.listen( listenPort, function() {
     console.log('[DEBUG] Listening on *:' + listenPort);
 });
 
@@ -34,12 +34,15 @@ mysql.Init(host, port, database, user, password);
 // 常量
 //--------------------------------------------------
 var c_HeartbeatCheckMS = 100000;          //心跳检测毫秒数
-var c_HeartbeatCheckTimeoutCount = 2;   //心跳检测超时数量
+var c_HeartbeatCheckTimeoutCount = 3;   //心跳检测超时数量
 
 //--------------------------------------------------
 // 全局变量
 //--------------------------------------------------
 var clients = [];
+
+IO = new (require('./common/MySocket.js'));
+IO.Init(app, expressWs);
 
 IO.on('connection', function (socket) {
     GameLog('Client [' + socket.id + '] connected!');
@@ -72,7 +75,7 @@ IO.on('connection', function (socket) {
         // 通知gameServer 删除client
         GameServer.DeleteClient(client);
         
-        client.socket.broadcast.emit('clientDisconnect', { name: client.id  });
+        IO.emit('clientDisconnect', { name: client.id  });
             
         var idx = Util.FindIndexById(clients, client.id);
         if ( idx >= 0 ) {

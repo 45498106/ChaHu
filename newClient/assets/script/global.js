@@ -1,9 +1,9 @@
-window.GameHost = "118.89.101.184";
+window.GameHost = "chahu.h5ii.com";
 window.GamePort = 18080;
-window.LogHost = "118.89.101.184";
+window.LogHost = "chahu.h5ii.com";
 window.LogPort = 38086;
 
-
+/*
 if (!cc.sys.isNative) {
     cc.loader.load("http://" + window.GameHost+':' + window.GamePort + '/socket.io/socket.io.js', 
         function (err, tex) {
@@ -16,18 +16,18 @@ if (!cc.sys.isNative) {
     );
 } else {
     window.io = SocketIO;
-}
+}*/
 
 function CreateLogger(useNet) {
     if (typeof window.logger === "undefined") {
         window.logger = require("logger");
         if (useNet === true) {
-            window.logger.socket = io.connect("http://" + window.LogHost+':' + window.LogPort);
-            window.logger.socket.on('connect', function(){
+            window.logger.socket = new WebSocket("ws://" + window.LogHost+':' + window.LogPort);
+            window.logger.socket.onopen = function() {
                 if (typeof window.logger.socket.connected === 'undefined') {
                     window.logger.socket.connected = true;
                 }
-            });
+            };
         }
     }
 }
