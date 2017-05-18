@@ -73,6 +73,7 @@ cc.Class({
         hotUpdate : cc.Node,
         
         playingPnl : cc.Node,
+        accountsPnl : cc.Node,
         preparePnl : cc.Node,
         
         preSelfHead : cc.Node,
@@ -92,6 +93,7 @@ cc.Class({
         exitRoomBtn : cc.Button,
         inviteBtn : cc.Button,
         readyBtn : cc.Button,
+        countiuBtn : cc.Button,
         
         gap : cc.Prefab,
         gap_v : cc.Prefab,
@@ -150,6 +152,11 @@ cc.Class({
         jiangLabel : cc.Label,
         niuLabel : cc.Label,
         roomIdLabel : cc.Label,
+        
+        dongDown : cc.Sprite,
+        dongUp : cc.Sprite,
+        dongLeft : cc.Sprite,
+        dongRight : cc.Sprite,
     },
 
     // use this for initialization
@@ -160,6 +167,7 @@ cc.Class({
         this.exitRoomBtn.node.on('click', this.OnExitRoom, this)
         this.inviteBtn.node.on('click', this.OnInvitePlayer, this)
         this.readyBtn.node.on('click', this.OnReady, this)
+        this.countiuBtn.node.on('click', this.OnContinue, this);
         
         this.opBtnGuo.node.on('click', this.OnOpGuo, this);
         this.opBtnZha.node.on('click', this.OnOpZha, this);
@@ -217,6 +225,24 @@ cc.Class({
         this.roomIdLabel.string = "房间:" + GameData.userRoomData.id;
     },
     
+    SetDongInfo : function(place) {
+        
+        this.dongDown.node.active = false;
+        this.dongUp.node.active = false;
+        this.dongLeft.node.active = false;
+        this.dongRight.node.active = false;
+        
+        if (IsFrontPlayer(place)) {
+            this.dongLeft.node.active = true;
+        }else if (IsBackPlayer(place)) {
+            this.dongRight.node.active = true;
+        }else if (IsOppositePlayer(place)){
+            this.dongUp.node.active = true;
+        }else {
+            this.dongDown.node.active = true;
+        }
+    },
+    
     PrepareShow : function() {
         this.playingPnl.active = false;
         this.preparePnl.active = true;
@@ -229,6 +255,7 @@ cc.Class({
                 this.OnJoinPlayer(player.place);
             }
         }
+        
         this.preRoomIdLabel.string = "房间ID:"+ GameData.userRoomData.id;
         
         this.SetTitleInfo();
@@ -237,6 +264,7 @@ cc.Class({
     PlayingShow : function() {
         this.playingPnl.active = true;
         this.preparePnl.active = false;
+        this.accountsPnl.active = false;
         
         this.ClearAllOutput();
         this.InitPlayingHead();
@@ -529,6 +557,11 @@ cc.Class({
         GameSocket().Send("ready");
     },
     
+    OnContinue : function() {
+        this.accountsPnl.active = false;
+        GameSocket().Send("ready");
+    },
+    
     OnInitCards : function(event) {
         var data = event.detail;
         var place = data.place;
@@ -559,6 +592,8 @@ cc.Class({
             InitPlayerCards(place, player);
             GameData.needFlushCard = false;
         }
+        
+        this.SetDongInfo(place);
         
         if (IsFrontPlayer(place)) {
             this.FrontAddCard(card);
@@ -767,6 +802,8 @@ cc.Class({
     
         // 播放声音
         //huSound.play();
+        
+        this.accountsPnl.active = true;
     },
     
     

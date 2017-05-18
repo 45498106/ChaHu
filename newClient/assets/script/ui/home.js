@@ -31,7 +31,7 @@ cc.Class({
         this.cardLabel.string = GameData.userRoomCard;
         
         
-        SetSpriteImage(this.headSprite, GameData.userHeadUrl);
+        SetSpriteImage(this.headSprite, {url: GameData.userHeadUrl, type:'jpg'});
         
         // 获得房间数据
         GameSocket().Send("getRoomRecord");

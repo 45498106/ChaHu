@@ -1,7 +1,8 @@
-window.GameHost = "192.168.1.222";
+window.GameHost = "118.89.101.184";
 window.GamePort = 18080;
-window.LogHost = "192.168.1.222";
+window.LogHost = "118.89.101.184";
 window.LogPort = 38086;
+
 
 if (!cc.sys.isNative) {
     cc.loader.load("http://" + window.GameHost+':' + window.GamePort + '/socket.io/socket.io.js', 
@@ -68,7 +69,7 @@ window.SetSpriteImage = function(sprite, url, localRes) {
     else {
         if (!cc.sys.isNative) {
             var img = new Image();
-            img.src = url;
+            img.src = typeof url === 'object' ? url.url : url;
             img.onload = function() {
                 var texture = new cc.Texture2D();
                 texture.generateMipmaps = false;
@@ -79,10 +80,9 @@ window.SetSpriteImage = function(sprite, url, localRes) {
             }
         }else {
             cc.loader.load(url, function (err, tex) {
-                if (err) {
-                    GameLog(err, url);
-                }else{
-                    GameLog('Should load a texture from external url: ' + (tex instanceof cc.Texture2D));
+                var success = (tex instanceof cc.Texture2D);
+                GameLog("err: " + err + " load a texture from external url: " + url + " status: " + success);
+                if(success){
                     var newFrame = new cc.SpriteFrame(tex);
                     sprite.spriteFrame = newFrame;
                 }
@@ -121,7 +121,7 @@ window.LoadAllCardSpriteFrame = function() {
         }
     }
     
-    for (var i = 0; i < 50; ++i) {
-        cc.loader.loadRes('2/sdown'+i, cc.SpriteFrame, delegate(5,i));
+    for (var ii = 0; ii < 50; ++ii) {
+        cc.loader.loadRes('2/sdown'+ii, cc.SpriteFrame, delegate(5,ii));
     }
 }

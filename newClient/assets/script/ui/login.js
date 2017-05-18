@@ -38,6 +38,7 @@ cc.Class({
     },
     
     GetUniqueID : function(callback) {
+        GameLog("GetUniqueID");
         if (!cc.sys.isNative) {
             var Fingerprint2 = require('fingerprint2.min');
             new Fingerprint2().get(function(result, components){
@@ -49,18 +50,21 @@ cc.Class({
         
         else if (cc.sys.os === cc.sys.OS_ANDROID) {
             if (callback) {
-                callback("973f362084eb6eadb057936fbcfdd877");
+                var androidUdid = jsb.reflection.callStaticMethod("org/openudid/OpenUDID_manager", "getOpenUDID", "()Ljava/lang/String;") 
+                GameLog("Android UDID: "+androidUdid);
+                callback("androidUdid");
             }
         }else if (cc.sys.os === cc.sys.OS_IOS) {
             if (callback) {
-                callback("973f362084eb6eadb057936fbcfdd877");
+                var udid = jsb.reflection.callStaticMethod("OpenUDID", 'value');
+                callback(udid);
             }
         }
         
     },
 
     // called every frame, uncomment this function to activate update callback
-    // update: function (dt) {
-
-    // },
+    update: function (dt) {
+        GameLog("GetUniqueID");
+    },
 });
