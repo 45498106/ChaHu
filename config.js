@@ -4,13 +4,7 @@
 var Config = {
 
     listenPort : 18080,
-    /*
-    db_host : '58dc68f83bd4f.gz.cdb.myqcloud.com',
-    db_port : 5818,
-    db_database : 'nc',
-    db_user : 'cdb_outerroot',
-    db_password : '0217104lsh',*/
-
+    
     /*
     db_host : '127.0.0.1',
     db_port : 3306,
@@ -23,6 +17,8 @@ var Config = {
     db_database : 'bdm25324667_db',
     db_user : 'bdm25324667',
     db_password : '0217104lsh',
+    
+    loginMenu : ['weixin', 'guest'],
 }
 
 if(typeof module !== 'undefined')

@@ -87,7 +87,7 @@ Player.prototype.CanJiangCards = function(card) {
 Player.prototype.AddCard = function(card){
     this.CalcHuCard(card);
     
-    if (this.data.firstAdd && Mahjong.HasNiuCardsByHand(this.data.cards)) {
+    if (this.room.RuleCanNiu() && this.data.firstAdd && Mahjong.HasNiuCardsByHand(this.data.cards)) {
         this.data.canNiu = true;
         this.data.firstAdd = false;
     }
@@ -292,7 +292,7 @@ Player.prototype.CalcThrowCradOperation = function(data, card, throwCardPlace) {
         data['gang'] = 1;
     }
 
-    if (1) {
+    if (self.room.RuleCanJiang()) {
         var nextPlace = throwCardPlace + 1;
         if (nextPlace === 4) { 
             nextPlace = 0; 
@@ -367,11 +367,12 @@ Player.prototype.SendInitCards = function(player, toSelf)
     return data;
 }
 
-Player.prototype.SendGetCard = function(player, card, self) 
+Player.prototype.SendGetCard = function(player, card, self, remainNumber) 
 {
     var  toSelf = self.data.place === player.data.place;
     var data = {    "place"             : player.data.place,
-                    "card"              : toSelf ? card : 0 };
+                    "card"              : toSelf ? card : 0,
+                    "remainNum"         : remainNumber };
     
     if (toSelf) {
         self.CalcGetCradOperation(data, card);
@@ -644,6 +645,39 @@ Player.prototype.SendPlayerInfoByReconnection = function(playerData, status, sel
                 self.CalcThrowCradOperation(data.op, status.lastThrowCard, status.lastThrowPlace);
             }
         }
+    }
+
+    return data;
+}
+
+
+Player.prototype.SendLiuJuCards = function(player) 
+{
+    var data = {    "place"             : player.data.place,
+                    "cards"             : player.data.cards };
+    
+    if (player.data.pengCards.length > 0) {
+        data.pengCards = player.data.pengCards;
+    }
+    
+    if (player.data.gangCards.length > 0) {
+        data.gangCards = player.data.gangCards;
+    }
+    
+    if (player.data.kanCards.length > 0) {
+        data.kanCards = player.data.kanCards;
+    }
+    
+    if (player.data.niuCards.length > 0) {
+        data.niuCards = player.data.niuCards;
+    }
+    
+    if (player.data.jiangCards.length > 0) {
+        data.jiangCards = player.data.jiangCards;
+    }
+    
+    if (typeof throwCardPlace !== 'undefined') {
+        data.throwCardPlace = throwCardPlace;
     }
 
     return data;

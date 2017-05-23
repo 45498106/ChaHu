@@ -55,7 +55,7 @@ function Room()
 {
     this.duration = 0;      // 持续时间
     this.players = [null, null, null, null]; // 玩家列表
-    this.playData = [null, null, null, null]; // 游戏数据
+    this.playData = null; // 游戏数据
     
     this.cards = null; 
     this.cardsIndex = 0;
@@ -64,9 +64,10 @@ function Room()
     this.checks = new Array();
     this.lastThrowCard = 0;
     this.lastThrowPlace = 0;
-    this.played = false;    // 游戏已经开始
+    this.started = false;   // 游戏已经开始
+    this.playing = false;   // 游戏中
     this.pause = false;     // 玩家离线,游戏暂停
-    this.state = 1;         // 摸牌状态
+    this.state = 1;         // (摸牌状态 1, 打牌状态2, 结算状态3)
 }
 
 Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playCount, costMoney)
@@ -86,6 +87,27 @@ Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playC
     this.time = time;
 }
 
+Room.prototype.RuleHasZhuangXian = function() {
+    if ((this.ruleId & 1) === 1) {
+        return true;
+    }
+    return false;
+}
+
+Room.prototype.RuleCanNiu = function() {
+    if ((this.ruleId & 2) === 2) {
+        return true;
+    }
+    return false;
+}
+
+Room.prototype.RuleCanJiang = function() {
+    if ((this.ruleId & 4) === 4) {
+        return true;
+    }
+    return false;
+}
+
 Room.prototype.GetFreePlace = function(id)
 {
     for (var i = 0; i < this.players.length; ++i) {
@@ -103,6 +125,21 @@ Room.prototype.GetPlayerCount = function(id)
             ++count;
     }
     return count;
+}
+
+Room.prototype.PlayerCanEnter = function(player)
+{
+    if (this.playData === null) {
+        return true;
+    }
+    else {
+        for (var i = 0; i < 4; ++i) {
+            if (this.playData[i].userId === player.id) {
+                return true;
+            }
+        }
+    }
+    return false
 }
 
 Room.prototype.CancelPlayerReady = function(id)
@@ -183,7 +220,7 @@ Room.prototype.AddPlayer = function(player)
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'ready', function (data) {
         GameLog('ready');
-        if (me.played === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === true) { GameLog("不合法的消息请求"); return; }
         player.ready = true;
         me.BroadcastPlayers(null, "readyOk", player.place);
         
@@ -192,12 +229,12 @@ Room.prototype.AddPlayer = function(player)
     
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'unready', function (data) {
-        if (me.played === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === true) { GameLog("不合法的消息请求"); return; }
         player.ready = false;
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'needThrowCard', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var card = data.card;
         if (me.getCardPlace === player.data.place && me.checks.length === 0) {
             if(player.ThrowCard(card)) {
@@ -214,14 +251,14 @@ Room.prototype.AddPlayer = function(player)
 
                 if (false === me.ThrowCardCheck(player, card)) {
                     me.DoBackCardPlace();
-                    me.PlayeAddCard();
+                    me.PlayerAddCard();
                 }
             }
         }
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'pengCards', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -237,7 +274,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'gangCards', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -253,7 +290,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'huCards', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -269,7 +306,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'kanCards', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         GameLog("kanCards");
         var process = false;
         var checkEvent;
@@ -286,7 +323,8 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'niuCards', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.RuleCanNiu() === false) { GameLog("房间规则不能牛牌"); return; };
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -302,7 +340,8 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'jiangCards', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.RuleCanJiang() === false) { GameLog("房间规则不能将牌"); return; };
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -318,16 +357,16 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'piaoCards', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'passCards', function(data) {
-        if (me.played === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         me.PlayerPassOperate(player);
     });
     
-    if (false === me.played) {
+    if (false === me.started) {
         // 设置自己位子
         player.place = me.GetFreePlace();
         // 先通知自己创建自己的单位
@@ -368,7 +407,7 @@ Room.prototype.AddPlayer = function(player)
     player.socket.join(me.roomName);
     me.players[player.place] = player;
     
-    if (false === me.played) {
+    if (false === me.playing) {
         // 新一局准备
         me.SendPlayerReady();
     }
@@ -384,7 +423,7 @@ Room.prototype.RemovePlayer = function(player, noBroadcast)
         player.socket.leave(this.roomName);
         
         if (typeof noBroadcast === 'undefined') {
-            if (me.played) {
+            if (me.started) {
                 this.BroadcastPlayers(player, "playerOffline", player.place);
             }else {
                 this.BroadcastPlayers(player, "losePlayer");
@@ -393,7 +432,7 @@ Room.prototype.RemovePlayer = function(player, noBroadcast)
 
         this.players[place] = null;
         player.room = null;
-        if (me.played) {
+        if (me.started) {
             me.playData[place].offline = true;
             me.pause = true;
         }
@@ -448,7 +487,7 @@ Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
         if(action === "initCards") {
             player.socket.emit(action, Player.prototype.SendInitCards(who, player.data.place === who.data.place));
         }else if(action === "getCard") {
-            player.socket.emit(action, Player.prototype.SendGetCard(who, argument, player));
+            player.socket.emit(action, Player.prototype.SendGetCard(who, argument, player, argument2));
         }else if(action === "throwCard") {
             player.socket.emit(action, Player.prototype.SendThrowCard(who, argument, player));
         }else if(action === "pengCards") {
@@ -465,6 +504,8 @@ Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
             player.socket.emit(action, Player.prototype.SendAddNiuCard(who, argument, player));
         }else if(action === "jiangCards") {
             player.socket.emit(action, Player.prototype.SendJiangCards(who, argument, player, argument2));
+        }else if(action === "liuJu") {
+            player.socket.emit(action, Player.prototype.SendLiuJuCards(who, argument, player));
         }
     }
 }
@@ -577,18 +618,20 @@ Room.prototype.NewGame = function()
 {
     this.cards = staticCards.slice();
     this.cardsIndex = 0;
-    this.played = true;
+    this.started = true;
+    this.playing = true;
     this.pause = false;
     this.checks.splice(0, this.checks.length);
     
     // 生成游戏数据
-    for (var pi = 0; pi < this.playData.length; ++pi) {
-        if (this.playData[pi] === null) {
+    if (this.playData === null) {
+        this.playData = new Array(null,null,null,null);
+        for (var pi = 0; pi < 4; ++pi) {
             this.playData[pi] = new PlayData();
             this.players[pi].AttachData(this.playData[pi]);
         }
     }
-    
+ 
     if (this.costMoney === 0) {
         // 如果没有扣钱,在这里扣钱
         this.costMoney = 1;
@@ -634,7 +677,7 @@ Room.prototype.NewGame = function()
     
     // 庄家先摸牌
     this.getCardPlace = this.bankerPlace;
-    this.PlayeAddCard();
+    this.PlayerAddCard();
 }
 
 Room.prototype.DoBackCardPlace = function() {
@@ -644,15 +687,21 @@ Room.prototype.DoBackCardPlace = function() {
     }
 }
 
-Room.prototype.PlayeAddCard = function() {
+Room.prototype.PlayerAddCard = function() {
     // 摸牌状态
     this.state = 1;
     if (this.cardsIndex + 1 == this.cards.length) {
         // 流局
-        Room.GameStop();
+        Room.prototype.SendLiuJuCards(this);
+        this.GameEnd();
+        // 新一局准备.
+        this.CancelPlayerReady();
+        this.SendPlayerReady();
     }else {
         var player = this.players[this.getCardPlace];
         var card = this.cards[this.cardsIndex++];
+        
+        GameLog("cardsIndex=", this.cardsIndex);
 
         if (player.data.niuCards.length > 0 && 
            (card === 45 || card === 46 || card === 47))
@@ -667,7 +716,7 @@ Room.prototype.PlayeAddCard = function() {
             function AddCardNextSecond(room, getCardPlace) {
                 return function () {
                     room.getCardPlace = getCardPlace;
-                    room.PlayeAddCard();
+                    room.PlayerAddCard();
                 };
             }
             setTimeout(AddCardNextSecond(this, getCardPlace), 1000);
@@ -693,7 +742,7 @@ Room.prototype.PlayeAddCard = function() {
                 checkEvent.kan = 1;
             }
             
-            if (player.data.canNiu) {
+            if (this.RuleCanNiu() && player.data.canNiu) {
                 if (checkEvent === null) {
                     checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
                 }
@@ -712,7 +761,8 @@ Room.prototype.PlayeAddCard = function() {
                 GameLog("trigger checkEvent(add card)---------------->");
             }
             
-            this.BroadcastPlayers2(player, "getCard", card);
+            var remainNumber = (this.cards.length - 1) - this.cardsIndex;
+            this.BroadcastPlayers2(player, "getCard", card, remainNumber);
         }
     }
 }
@@ -743,7 +793,7 @@ Room.prototype.ThrowCardCheck = function(player, card) {
         }
         
         // 将牌
-        if (1) {
+        if (this.RuleCanJiang()) {
             var nextPlace = player.data.place + 1;
             if (nextPlace === 4) { 
                 nextPlace = 0; 
@@ -809,7 +859,7 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
     var player = me.players[place];
     switch(select) {
         case enum_Hu: {
-            GameLog("玩家" + player.nickName + "胡牌了");
+            GameLog("玩家" + player.name + "胡牌了");
             if (selfCheck) {
                 me.BroadcastPlayers2(player, "huCards", me.cards[me.cardsIndex - 1]);
             }else {
@@ -829,7 +879,7 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
                 me.BroadcastPlayers2(player, "gangCards", me.lastThrowCard, me.lastThrowPlace);
             }
             me.getCardPlace = player.data.place;
-            me.PlayeAddCard();
+            me.PlayerAddCard();
             me.RemoveLastOneInPlayerOutputCards();
         }break;
         case enum_Peng: {
@@ -849,7 +899,7 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
         case enum_Pass: {
             if (selfCheck === false ) {
                 me.DoBackCardPlace();
-                me.PlayeAddCard();
+                me.PlayerAddCard();
             }
         }break;
     }
@@ -957,7 +1007,7 @@ Room.prototype.ProcessCheck = function() {
     }
 }
 
-Room.prototype.TriggerSelfChack = function(player)
+Room.prototype.TriggerSelfCheck = function(player)
 {
     var checkEvent = null;
     if (Mahjong.HasGangCardsByHand(player.data.cards)) {
@@ -974,7 +1024,7 @@ Room.prototype.TriggerSelfChack = function(player)
         checkEvent.kan = 1;
     }
     
-    if (player.data.canNiu) {
+    if (this.RuleCanNiu() && player.data.canNiu) {
         if (checkEvent === null) {
             checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
         }
@@ -999,7 +1049,7 @@ Room.prototype.PlayerPengCards = function (player) {
     // 玩家碰牌
     player.PengCards(this.lastThrowCard);
     // 触发检测
-    // this.TriggerSelfChack(player);
+    // this.TriggerSelfCheck(player);
     // 通知
     this.BroadcastPlayers2(player, "pengCards", this.lastThrowCard, this.lastThrowPlace);
     // 改变出牌位置
@@ -1019,7 +1069,7 @@ Room.prototype.PlayerKanCards = function (player) {
     // 玩家坎牌
     player.KanCards();
     // 触发检测
-    this.TriggerSelfChack(player);
+    this.TriggerSelfCheck(player);
     // 通知
     this.BroadcastPlayers2(player, "kanCards");
 }
@@ -1042,7 +1092,7 @@ Room.prototype.PlayerNiuCards = function (player) {
     player.NiuCards(countArray, addCards);
     
     // 触发检测
-    this.TriggerSelfChack(player);
+    this.TriggerSelfCheck(player);
     // 通知
     this.BroadcastPlayers2(player, "niuCards", addCards);
 }
@@ -1057,7 +1107,7 @@ Room.prototype.RemoveLastOneInPlayerOutputCards = function() {
 
 Room.prototype.GameEnd = function() {
     this.state = 3; // 结算状态
-    this.played = false;
+    this.playing = false;
     ++this.playCount;
     
     // 写入记录到数据库
@@ -1073,9 +1123,29 @@ Room.prototype.SendRoomInfo = function(room) {
                     "quanId"            : room.quanId,
                     "hunCount"          : room.hunCount,
                     "playCount"         : room.playCount,
-                    "played"            : room.played ? 1 : 0 };
+                    "played"            : room.playing ? 1 : 0 };
+                    
+    if (room.playing) {
+        var remainNumber = (room.cards.length - 1) - room.cardsIndex;
+        data.remainNum = remainNumber;
+    }
     
     return JSON.stringify(data);
+}
+
+Room.prototype.SendLiuJuCards = function(room) {
+    
+    var datas = [];
+    var player = null;
+    for (var i = 0; i < room.players.length; ++i){
+        player = room.players[i];
+        datas.push(Player.prototype.SendLiuJuCards(player));
+    }
+
+    for (var j = 0; j < room.players.length; ++j){
+        player = room.players[j];
+        player.socket.emit("liuJu", datas);
+    }
 }
 
 Room.prototype.DBSaveRoomInfo = function(room) {

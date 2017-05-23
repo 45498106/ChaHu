@@ -67,6 +67,10 @@ GameServer.prototype.NewClient = function(client)
     var socket = client.socket;
     var server = this;
     
+    PROCESS_COCOS_SOCKETIO(socket, 'loginMenu', function (data) {
+        socket.emit('loginMenuBack', Config.loginMenu);
+    });
+    
     PROCESS_COCOS_SOCKETIO(socket, 'enterGame', function (data) {
         // 登录游戏
         if (typeof client.player !== 'undefined') {
@@ -110,7 +114,7 @@ GameServer.prototype.NewClient = function(client)
                     }
                 });
                 
-                socket.emit('enterGameBack',  data);
+                socket.emit('enterGameBack', data);
                 
                 // 创建新用户
                 var newPlayer = new Player();
@@ -164,7 +168,7 @@ GameServer.prototype.NewClient = function(client)
         }
         
         var userId = client.player.id;
-        var ruleId = data.ruleId;
+        var ruleId = data.ruleId & 0x7;
         var quanId = data.quanId;
         var hunCount = data.hunCount;
         
@@ -182,13 +186,6 @@ GameServer.prototype.NewClient = function(client)
                 GameLog("重复创建房间, 已有roomId=", roomData.id);
                 GameLog("已创建房间时间", now);
                 return;
-            }
-
-            if ( !(ruleId === 1 || 
-                   ruleId === 2 ||
-                   ruleId === 3 ) ) {
-                GameLog("错误的规则选项", ruleId);
-                return 
             }
             
             var cast = 0;
@@ -342,8 +339,8 @@ GameServer.prototype.JoinRoom = function(player, roomId)
                 player.socket.emit('joinRoomBack', Room.prototype.SendRoomInfo(room));
                 
                 // 添加玩家
-                room.AddPlayer(player);
                 player.room = room;
+                room.AddPlayer(player);
             }
             else {
                 GameLog("房间不存在!");
@@ -355,9 +352,14 @@ GameServer.prototype.JoinRoom = function(player, roomId)
     else {
         room = this.rooms[roomId];
         
-        if (room.GetPlayerCount() === room.players.length) {
-            // 人数已满!
-            GameLog("房间人数已满!");
+        if (room.GetPlayerCount() === room.players.length || room.PlayerCanEnter(player) === false) {
+            if (room.GetPlayerCount() === room.players.length) {
+                // 人数已满!
+                GameLog("房间人数已满!");
+            }else {
+                GameLog("并非原房间开局时的玩家参与!");
+            }
+            
             GameDB.GetUserData(userId, function(result, dbData){
                 if (result === false) {
                     return;
@@ -378,8 +380,8 @@ GameServer.prototype.JoinRoom = function(player, roomId)
         player.socket.emit('joinRoomBack', Room.prototype.SendRoomInfo(room));
         
         // 添加玩家
-        room.AddPlayer(player);
         player.room = room;
+        room.AddPlayer(player);
         
         // 写入记录到数据库
         GameDB.UpdateRoomData(userId, Room.prototype.DBSaveRoomInfo(room));

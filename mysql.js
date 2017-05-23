@@ -65,23 +65,27 @@ MySQL.prototype.Init = function (host, port, database, user, password)
 MySQL.prototype.Query = function(commond, func)
 {
     if (this.connected == true && this.connection) {
-        GameLog("SQL->", commond);
-        var startTime = (new Date()).getMilliseconds();
-        this.connection.query(commond, function (err, results, fields) {
-            var endTime = (new Date()).getMilliseconds();
-            GameLog("查询用时:",(endTime - startTime), "ms");
-            if (err) {
-                if(err.code === 'ER_PARSE_ERROR') {
-                    GameLog("查询语句解析错误!", err);
-                } else {
-                    GameLog(err); 
+        try {
+            var startTime = (new Date()).getMilliseconds();
+            var t = this.connection.query(commond, function (err, results, fields) {
+                var endTime = (new Date()).getMilliseconds();
+                GameLog("查询用时:",(endTime - startTime), "ms");
+                if (err) {
+                    if(err.code === 'ER_PARSE_ERROR') {
+                        GameLog("查询语句解析错误!", err);
+                    } else {
+                        GameLog(err); 
+                    }
+                    return; 
                 }
-                return; 
-            }
-            
-            if (typeof func === 'function')
-                func(results, fields);
-        });
+                
+                if (typeof func === 'function')
+                    func(results, fields);
+            });
+            GameLog("SQL->", t.sql);
+        } catch (e) {
+            GameLog("查询错误" + e);
+        }
     }
  }
  
@@ -89,22 +93,26 @@ MySQL.prototype.Query = function(commond, func)
 {
     if (this.connected == true && this.connection) {
         var startTime = (new Date()).getMilliseconds();
-        var t = this.connection.query(commond, array, function (err, results, fields) {
-            var endTime = (new Date()).getMilliseconds();
-            GameLog("查询用时:",(endTime - startTime), "ms");
-            if (err) { 
-                if(err.code === 'ER_PARSE_ERROR') {
-                    GameLog("查询语句解析错误!", err);
-                } else {
-                    GameLog(err); 
+        try {
+            var t = this.connection.query(commond, array, function (err, results, fields) {
+                var endTime = (new Date()).getMilliseconds();
+                GameLog("查询用时:",(endTime - startTime), "ms");
+                if (err) { 
+                    if(err.code === 'ER_PARSE_ERROR') {
+                        GameLog("查询语句解析错误!", err);
+                    } else {
+                        GameLog(err); 
+                    }
+                    return; 
                 }
-                return; 
-            }
-            
-            if (typeof func === 'function')
-                func(results, fields);
-        });
-        GameLog("SQL->", t.sql);
+                
+                if (typeof func === 'function')
+                    func(results, fields);
+            });
+            GameLog("SQL->", t.sql);
+        } catch (e) {
+            GameLog("查询错误" + e);
+        }
     }
  }
 
