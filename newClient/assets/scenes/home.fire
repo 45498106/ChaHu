@@ -3259,7 +3259,7 @@
     "_position": {
       "__type__": "cc.Vec2",
       "x": -209,
-      "y": 28
+      "y": 28.000000000000114
     },
     "_skewX": 0,
     "_skewY": 0,
@@ -3714,8 +3714,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 34,
-      "height": 34
+      "width": 38,
+      "height": 40
     },
     "_children": [],
     "_rotationX": 0,
@@ -3750,9 +3750,9 @@
     "node": {
       "__id__": 98
     },
-    "_enabled": true,
+    "_enabled": false,
     "_spriteFrame": {
-      "__uuid__": "d68a09e8-b9ae-4522-9b45-9c5734044cf9"
+      "__uuid__": "8a0c2159-28ae-4a37-ae92-195bd2d94ce8"
     },
     "_type": 0,
     "_sizeMode": 2,
@@ -3855,7 +3855,7 @@
         "__id__": 103
       }
     ],
-    "_N$isChecked": true
+    "_N$isChecked": false
   },
   {
     "__type__": "cc.ToggleGroup",
@@ -3864,8 +3864,8 @@
     "node": {
       "__id__": 95
     },
-    "_enabled": true,
-    "allowSwitchOff": false
+    "_enabled": false,
+    "allowSwitchOff": true
   },
   {
     "__type__": "cc.ClickEvent",
@@ -4011,8 +4011,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 34,
-      "height": 34
+      "width": 38,
+      "height": 40
     },
     "_children": [],
     "_rotationX": 0,
@@ -4049,7 +4049,7 @@
     },
     "_enabled": true,
     "_spriteFrame": {
-      "__uuid__": "d68a09e8-b9ae-4522-9b45-9c5734044cf9"
+      "__uuid__": "8a0c2159-28ae-4a37-ae92-195bd2d94ce8"
     },
     "_type": 0,
     "_sizeMode": 2,
@@ -4298,8 +4298,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 34,
-      "height": 34
+      "width": 38,
+      "height": 40
     },
     "_children": [],
     "_rotationX": 0,
@@ -4334,9 +4334,9 @@
     "node": {
       "__id__": 113
     },
-    "_enabled": true,
+    "_enabled": false,
     "_spriteFrame": {
-      "__uuid__": "d68a09e8-b9ae-4522-9b45-9c5734044cf9"
+      "__uuid__": "8a0c2159-28ae-4a37-ae92-195bd2d94ce8"
     },
     "_type": 0,
     "_sizeMode": 2,
@@ -4439,7 +4439,7 @@
         "__id__": 117
       }
     ],
-    "_N$isChecked": true
+    "_N$isChecked": false
   },
   {
     "__type__": "cc.ClickEvent",
@@ -4448,7 +4448,7 @@
     },
     "component": "createRoom",
     "handler": "OnRuleRadioChange",
-    "customEventData": "3"
+    "customEventData": "4"
   },
   {
     "__type__": "cc.Sprite",
@@ -6788,8 +6788,6 @@
         "__id__": 116
       }
     ],
-    "_ruleCurrentToggle": null,
-    "_ruleToggleId": "Integer",
     "juRadioButton": [
       {
         "__id__": 136

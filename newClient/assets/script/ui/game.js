@@ -26,7 +26,7 @@ var GetFrontPlayer = function() {
 var GetBackPlayer = function() {
     if (GameData.selfPlace === 3) {
         return GameData.players[0];
-    }else {
+    } else {
         return GameData.players[GameData.selfPlace + 1];
     }
 }
@@ -34,7 +34,7 @@ var GetBackPlayer = function() {
 var GetOppositePlayer = function() {
     if (GameData.selfPlace > 1) {
         return GameData.players[GameData.selfPlace - 2];
-    }else {
+    } else {
         return GameData.players[GameData.selfPlace + 2];
     }
 }
@@ -157,6 +157,16 @@ cc.Class({
         dongUp : cc.Sprite,
         dongLeft : cc.Sprite,
         dongRight : cc.Sprite,
+        
+        
+        timeLabel : cc.Label,
+        secondLabel : cc.Label,
+        
+        
+        animHu : cc.Node,
+        huArrow : cc.Node,
+        animLiuJu : cc.Node,
+        
     },
 
     // use this for initialization
@@ -164,9 +174,9 @@ cc.Class({
         this.playingPnl.active = false;
         this.preparePnl.active = false;
         
-        this.exitRoomBtn.node.on('click', this.OnExitRoom, this)
-        this.inviteBtn.node.on('click', this.OnInvitePlayer, this)
-        this.readyBtn.node.on('click', this.OnReady, this)
+        this.exitRoomBtn.node.on('click', this.OnExitRoom, this);
+        this.inviteBtn.node.on('click', this.OnInvitePlayer, this);
+        this.readyBtn.node.on('click', this.OnReady, this);
         this.countiuBtn.node.on('click', this.OnContinue, this);
         
         this.opBtnGuo.node.on('click', this.OnOpGuo, this);
@@ -198,6 +208,7 @@ cc.Class({
         GameEvent().OnEvent('NiuCards', this.OnNiuCards, this);
         GameEvent().OnEvent('JiangCards', this.OnJiangCards, this);
         GameEvent().OnEvent('HuCards', this.OnHuCards, this);
+        GameEvent().OnEvent('LiuJuCards', this.OnLiuJuCards, this);
        
 
         if (GameData.userRoomData.played === 0) {
@@ -209,19 +220,112 @@ cc.Class({
                 GameData.resumeGame === false;
             }
         }
+        
+        this.UpdataTimeLabel();
+    },
+    
+    PlayCountDown : function() {
+        
+        if (typeof this.playCountDownFunc === 'function') {
+            this.unschedule(this.playCountDownFunc);
+        }
+        else {
+            this.playCountDownFunc = function(){
+                --this.secondLabel.tiemCount;
+                this.secondLabel.string = this.secondLabel.tiemCount;
+            }.bind(this);
+        }
+        
+        var interval = 1; // 1 miao
+        var repeat = 29;  // 30 ci
+        
+        this.secondLabel.tiemCount = 30;
+        this.secondLabel.string = this.secondLabel.tiemCount; 
+        
+        this.schedule(this.playCountDownFunc, interval, repeat, 0);
+    },
+    
+    
+    PlayHuAnim : function(place) {
+        this._huPlace = place;
+        this.animHu.active = true;
+        var anim = this.animHu.getComponent(cc.Animation);
+        anim.play();
+        
+        anim.on('finished', function() {
+            this.animHu.active = false;
+            this.huArrow.active = true;
+            var anim = this.huArrow.getComponent(cc.Animation);
+            if (this._huPlace)
+            
+            if (IsFrontPlayer(this._huPlace)) {
+                anim.play('anim-arrow-left');
+            }else if (IsBackPlayer(this._huPlace)) {
+                anim.play('anim-arrow-right');
+            }else if (IsOppositePlayer(this._huPlace)){
+                anim.play('anim-arrow-up');
+            }else {
+                anim.play('anim-arrow-down');
+            }
+            
+            anim.play('anim-arrow-down');
+            anim.on('finished', function(){
+                this.huArrow.active = false;
+                this.accountsPnl.active = true;
+            }.bind(this), this);
+        }.bind(this), this);
+    },
+    
+    PlayLiuJuAnim : function() {
+        this.animLiuJu.active = true;
+        var anim = this.animHu.getComponent(cc.Animation);
+        anim.play();
+        
+        anim.on('finished', function() {
+            this.animLiuJu.active = false;
+            this.accountsPnl.active = true;
+        }.bind(this), this);
+    },
+    
+    UpdataTimeLabel : function() {
+        
+        var now = new Date();
+        var nowHours = now.getHours();
+        var nowMintues = now.getMinutes();
+        
+        var next = new Date(now);
+        next.setMinutes(nowMintues + 1, 0 , 0);
+        
+        var fun1 = (function() {
+            var now = new Date();
+            var nowHours = now.getHours();
+            var nowMintues = now.getMinutes();
+            this.timeLabel.string = nowHours + ":" + nowMintues;
+        }.bind(this));
+        
+        fun1();
+        
+        setTimeout(function() {
+            fun1();
+            setInterval(fun1, 60000);
+        }, next.getTime() - now.getTime());
     },
 
     SetTitleInfo : function() {
         
-        this.remainLabel.string = "剩余:"+120+"张";
+        this.remainLabel.string = "剩余:"+ 120 +"张";
+        if (typeof GameData.userRoomData.remian === 'number') {
+            this.remainLabel.string = "剩余:"+GameData.userRoomData.remian+"张";
+        }
+        
         var quan = (GameData.userRoomData.quanId === 1) ? 1 : 4;
         var playCount = GameData.userRoomData.playCount;
         var quanCount = (typeof playCount === 'undefined') ? 0 : (Math.floor(playCount / 4) + 1);
         this.quanLabel.string = quanCount + "/" + quan + "圈";
         this.hunLabel.string = "荤低:" + GameData.userRoomData.hunCount;
-        this.zhuangLabel.node.color = enableColor;
-        this.jiangLabel.node.color = disableColor;
-        this.niuLabel.node.color = enableColor;
+        this.zhuangLabel.node.color = (GameData.userRoomData.ruleId & 1) === 1 ? enableColor : disableColor;
+        this.jiangLabel.node.color = (GameData.userRoomData.ruleId & 4) === 4 ? enableColor : disableColor;
+        this.niuLabel.node.color = (GameData.userRoomData.ruleId & 2) === 2 ? enableColor : disableColor;
         this.roomIdLabel.string = "房间:" + GameData.userRoomData.id;
     },
     
@@ -589,8 +693,13 @@ cc.Class({
         var card = data.card;
         
         if (GameData.needFlushCard) {
-            InitPlayerCards(place, player);
+            var player = GameData.players[place];
+            this.InitPlayerCards(place, player);
             GameData.needFlushCard = false;
+        }
+        
+        if (typeof GameData.userRoomData.remainNum === 'number') {
+            this.remainLabel.string = "剩余:"+GameData.userRoomData.remainNum+"张";
         }
         
         this.SetDongInfo(place);
@@ -612,6 +721,9 @@ cc.Class({
                         typeof data.zha !== 'undefined', typeof data.xi !== 'undefined', 
                         typeof data.piao !== 'undefined' );
         
+        // 播放倒计时
+        this.PlayCountDown();
+        
     },
     
     OnAddNiuCard : function(event) {
@@ -621,7 +733,8 @@ cc.Class({
         var card = data.card;
         
         if (GameData.needFlushCard) {
-            InitPlayerCards(place, player);
+            var player = GameData.players[place];
+            this.InitPlayerCards(place, player);
             GameData.needFlushCard = false;
         }
 
@@ -641,6 +754,10 @@ cc.Class({
                         typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
                         typeof data.zha !== 'undefined', typeof data.xi !== 'undefined', 
                         typeof data.piao !== 'undefined' );
+                        
+        // 播放声音
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playAddNiu();
         
         GameData.needFlushCard = true;
     },
@@ -700,8 +817,14 @@ cc.Class({
                         typeof data.zha !== 'undefined', typeof data.xi !== 'undefined', 
                         typeof data.piao !== 'undefined' );
         
+        this.SetDongInfo(place);
+        
         // 播放声音
-        //pengSound.play();
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playPeng();
+        
+        // 播放倒计时
+        this.PlayCountDown();
     },
     
     OnGangCards : function(event) {
@@ -727,7 +850,8 @@ cc.Class({
                         typeof data.piao !== 'undefined' );
 
         // 播放声音
-        //pengSound.play();
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playGang();
     },
     
     OnKanCards : function(event) {
@@ -743,8 +867,10 @@ cc.Class({
                         typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
                         typeof data.zha !== 'undefined', typeof data.xi !== 'undefined', 
                         typeof data.piao !== 'undefined' );
+        
         // 播放声音
-        //jiangSound.play();
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playKan();
     },
     
     OnNiuCards : function(event) {
@@ -760,8 +886,10 @@ cc.Class({
                         typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
                         typeof data.zha !== 'undefined', typeof data.xi !== 'undefined', 
                         typeof data.piao !== 'undefined' );
+
         // 播放声音
-        //jiangSound.play();
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playNiu();
     },
     
     OnJiangCards : function(event) {
@@ -782,8 +910,10 @@ cc.Class({
                         typeof data.zha !== 'undefined', typeof data.xi !== 'undefined', 
                         typeof data.piao !== 'undefined' );
 
+
         // 播放声音
-        //jiangSound.play();
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playJiang();
     },
 
     OnHuCards : function(event) {
@@ -801,14 +931,45 @@ cc.Class({
                         typeof data.piao !== 'undefined' );
     
         // 播放声音
-        //huSound.play();
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playHu();
         
-        this.accountsPnl.active = true;
+        this.PlayHuAnim(place);
+    },
+    
+    OnLiuJuCards : function(event) {
+        
+        var player, place;
+        for (var i = 0; i < GameData.players.length; ++i) 
+        {
+            player = GameData.players[i];
+            place = player.place;
+            if (IsFrontPlayer(place)) {
+                this.FrontInitCards(player.cards, player.pengCards, player.gangCards, 
+                    player.kanCards, player.niuCards, player.jiangCards);
+            }else if (IsBackPlayer(place)) {
+                this.BackInitCards(player.cards, player.pengCards, player.gangCards, 
+                    player.kanCards, player.niuCards, player.jiangCards);
+            }else if (IsOppositePlayer(place)) {
+                this.OppositeInitCards(player.cards, player.pengCards, player.gangCards, 
+                    player.kanCards, player.niuCards, player.jiangCards);
+            }else {
+                this.SelfInitCards(player.cards, player.pengCards, player.gangCards, 
+                    player.kanCards, player.niuCards, player.jiangCards);
+            }
+        }
+        
+        this.PlayLiuJuAnim();
     },
     
     
     OnOpGuo : function() {
         GameSocket().Send('passCards');
+        this.ShowOperat(false, false, 
+                        false, false, 
+                        false, false,
+                        false, false, 
+                        false );
     },
     
     OnOpZha : function() {
@@ -959,6 +1120,7 @@ cc.Class({
             
             hand.addChild(inst);
             hand.addChild(cc.instantiate(gapPrefab));
+            k+=13;
         }
         
         for (k = 0; gangCards && k < gangCards.length; k+=4) {

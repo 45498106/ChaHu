@@ -38,8 +38,11 @@ exitRoomBack['Process'] = function (data) {
             // 解散房间
             GameEvent().SendEvent('ExitRoom');
             GameData.selfPlace = -1;
-        }else if (playerId === GameData.players[GameData.selfPlace]) {
+            GameData.players = new Array(null,null,null,null);
+        }else if (playerId === GameData.players[GameData.selfPlace].id) {
             GameEvent().SendEvent('ExitRoom');
+            GameData.selfPlace = -1;
+            GameData.players = new Array(null,null,null,null);
         }
     }
 };
@@ -203,6 +206,9 @@ getCard['Process'] = function (data) {
     // 添加摸牌
     player.cards.push(card);
     GameData.getCardPlace = place;
+    // 剩余牌数
+    GameData.userRoomData.remainNum = data.remainNum;
+    
     // 通知
     GameEvent().SendEvent('GetCard', data);
 };
@@ -365,6 +371,19 @@ huCards['Process'] = function (data) {
         player.gangCards = data.gangCards.slice();
     }
     
+    if (typeof data.kanCards !== 'undefined') {
+        player.kanCards = data.kanCards.slice();
+    }
+    
+    if (typeof data.niuCards !== 'undefined') {
+        player.niuCards = data.niuCards.slice();
+    }
+    
+    if (typeof data.jiangCards !== 'undefined') {
+        player.jiangCards = data.jiangCards.slice();
+    }
+
+    
     GameData.getCardPlace = -1;
     
     // 通知
@@ -485,3 +504,48 @@ playerReconnection['Process'] = function (data) {
 };
 
 MessageHandler.Add(playerReconnection);
+
+////////////////////////////////////////////////////////////////////////////////
+var liuJuCards = {};
+liuJuCards['interest'] = "liuJu";
+liuJuCards['Process'] = function (datas) {
+    GameLog(datas);
+
+    var place, data;
+    for (var i = 0; i < datas.length; ++i) {
+        data = datas[i];
+        place = data.place;
+        
+        var player = GameData.players[place];
+        
+        player.cards = data.cards.slice();
+        player.cards.sort();
+
+        if (typeof data.pengCards !== 'undefined') {
+            player.pengCards = data.pengCards.slice();
+        }
+    
+        if (typeof data.gangCards !== 'undefined') {
+            player.gangCards = data.gangCards.slice();
+        }
+        
+        if (typeof data.kanCards !== 'undefined') {
+            player.kanCards = data.kanCards.slice();
+        }
+        
+        if (typeof data.niuCards !== 'undefined') {
+            player.niuCards = data.niuCards.slice();
+        }
+        
+        if (typeof data.jiangCards !== 'undefined') {
+            player.jiangCards = data.jiangCards.slice();
+        }
+    }
+    
+    GameData.getCardPlace = -1;
+    // 通知
+    GameEvent().SendEvent('LiuJuCards', data);
+};
+
+MessageHandler.Add(liuJuCards);
+

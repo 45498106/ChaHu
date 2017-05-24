@@ -1,6 +1,9 @@
 (function() {
 
     var GameData = {
+        loginMenu : [],
+        
+        
     	userId : -1,
     	userName : "",
     	userHeadUrl : "",

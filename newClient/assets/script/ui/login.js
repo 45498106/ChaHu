@@ -3,6 +3,7 @@ cc.Class({
 
     properties: {
         persistNode : cc.Node,
+        buttonsPnl : cc.Node,
         weixinBtn : cc.Button,
         guestBtn : cc.Button,
     },
@@ -13,9 +14,35 @@ cc.Class({
         // 开启网络连接  
         GameSocket().Connect(window.GameHost, window.GamePort);
         // 注册事件
+        GameEvent().OnEvent("connectedServer", this.OnConnectedServer, this);
+        GameEvent().OnEvent("LoginMenuBack", this.OnLoginMenu, this);
         GameEvent().OnEvent("LoginSuccess", this.OnLoginSuccess, this);
+        
+        this.buttonsPnl.active = false;
     },
     
+    OnConnectedServer : function() {
+        if (GameSocket().IsConnected()) {
+            GameSocket().Send("loginMenu");   
+        }
+    },
+    
+    OnLoginMenu : function() {
+        
+        if (GameData.loginMenu.indexOf("weixin") >= 0) {
+            this.weixinBtn.node.active = true;
+        }else {
+            this.weixinBtn.node.active = false;
+        }
+        
+        if (GameData.loginMenu.indexOf("guest") >= 0) {
+            this.guestBtn.node.active = true;
+        }else {
+            this.guestBtn.node.active = false;
+        }
+        
+        this.buttonsPnl.active = true;
+    },
     
     onWeiXinLogin : function() {
         if (GameSocket().IsConnected()) {
@@ -52,7 +79,7 @@ cc.Class({
             if (callback) {
                 var androidUdid = jsb.reflection.callStaticMethod("org/openudid/OpenUDID_manager", "getOpenUDID", "()Ljava/lang/String;") 
                 GameLog("Android UDID: "+androidUdid);
-                callback("androidUdid");
+                callback(androidUdid);
             }
         }else if (cc.sys.os === cc.sys.OS_IOS) {
             if (callback) {

@@ -99,11 +99,6 @@ Socket.prototype.Connect =  function (address, port, router)
     if (self.connected) 
         return;
     
-    if (typeof io === 'undefined') {
-        GameLog("SocketIO unable to loaded !!!");
-        return;
-    }
-    
     try {
         
         var webSocket = new WebSocket("ws://" + address + ":" + port + "/" + (typeof router !== "undefined" ? router : ""));

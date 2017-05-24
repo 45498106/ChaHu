@@ -1,4 +1,15 @@
 var MessageHandler = require("msgHandler");
+
+var loginMenuBack = {};
+loginMenuBack['interest'] = "loginMenuBack";
+loginMenuBack['Process'] = function(message) {
+    GameLog(message);
+    GameData.loginMenu = message.slice();
+    GameEvent().SendEvent("LoginMenuBack");
+};
+MessageHandler.Add(loginMenuBack);
+
+
 var enterGameBack = {};
 enterGameBack['interest'] = "enterGameBack";
 enterGameBack['Process'] = function (message) {

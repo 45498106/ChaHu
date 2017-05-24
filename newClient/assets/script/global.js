@@ -3,6 +3,7 @@ window.GamePort = 18080;
 window.LogHost = "chahu.h5ii.com";
 window.LogPort = 38086;
 
+
 /*
 if (!cc.sys.isNative) {
     cc.loader.load("http://" + window.GameHost+':' + window.GamePort + '/socket.io/socket.io.js', 

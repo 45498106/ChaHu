@@ -31,11 +31,11 @@
         var delegate = function(object, objectMethod, data) {
             return function(e) {
                 GameLog("receive : " + data);
-                if (cc.sys.isNative) {
-                    return objectMethod.call(object, JSON.parse(e));
-                }else {
-                    return objectMethod.apply(object, arguments);
-                }
+                //if (cc.sys.isNative) {
+                    return objectMethod.call(object, e);
+                //}else {
+                //    return objectMethod.apply(object, arguments);
+                //}
             }
         }
         

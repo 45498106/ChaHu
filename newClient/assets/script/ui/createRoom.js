@@ -10,9 +10,6 @@ cc.Class({
             type: cc.Toggle
         },
         
-        _ruleCurrentToggle : cc.Toggle,
-        _ruleToggleId : cc.Integer,
-        
         juRadioButton: {
             default: [],
             type: cc.Toggle
@@ -53,9 +50,16 @@ cc.Class({
     },
     
     OnCreateRoom : function() {
+        
         this.createRoomBtn.interactable = false;
         
-        var ruleId = this._ruleToggleId;
+        var ruleId = 0;
+        for (var i = 0; i < this.ruleRadioButton.length; ++i) {
+            if (this.ruleRadioButton[i].isChecked) {
+                ruleId |= (1 << i);
+            }
+        }
+        
         var quanId = this._juToggleId;
         var hunCount = (Math.ceil(this.progressBar.progress * 10) / 10) * 100;
         
@@ -72,10 +76,8 @@ cc.Class({
     },
     
     OnRuleRadioChange : function(toggle, data) {
-        if (this._ruleCurrentToggle !== toggle) {
-            this._ruleCurrentToggle = toggle;
-            this._ruleToggleId = parseInt(data);
-        }
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playButton();
     },
     
     OnJuRadioChange : function(toggle, data) {
@@ -83,6 +85,9 @@ cc.Class({
             this._juCurrentToggle = toggle;
             this._juToggleId = parseInt(data);
         }
+        
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playButton();
     },
 
     // called every frame, uncomment this function to activate update callback
