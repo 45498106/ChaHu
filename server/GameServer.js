@@ -343,7 +343,7 @@ GameServer.prototype.JoinRoom = function(player, roomId)
                 room.AddPlayer(player);
             }
             else {
-                GameLog("房间不存在!");
+                player.socket.emit("error", { msg : "房间不存在!"});
                 return;
             }
         });
