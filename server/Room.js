@@ -127,6 +127,15 @@ Room.prototype.GetPlayerCount = function(id)
     return count;
 }
 
+Room.prototype.HasPlayer = function(player){
+    for (var i = 0; i < this.players.length; ++i) {
+        if (this.players[i] !== null && this.players[i].id === player.id) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Room.prototype.PlayerCanEnter = function(player)
 {
     if (this.playData === null) {
@@ -785,7 +794,7 @@ Room.prototype.ThrowCardCheck = function(player, card) {
         }
         
         if (Mahjong.CanGangCards(otherPlayer.data.cards, card) ||
-            Mahjong.CanGangCards(player.data.kanCards, card)) {
+            Mahjong.CanGangCards(otherPlayer.data.kanCards, card)) {
             if (checkEvent === null) {
                 checkEvent = { 'place' : otherPlayer.data.place, 'throwCheck' : 1};
             }

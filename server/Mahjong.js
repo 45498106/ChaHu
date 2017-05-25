@@ -25,7 +25,7 @@ function CanGangCards(cards, card) {
     return count === 3;
 }
 
-// 可否碰牌
+// 可否坎牌
 function CanKanCards(cards, card) {
     var count = 0;
     for (var i = 0; i < cards.length; ++i) {

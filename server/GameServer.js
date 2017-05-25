@@ -352,6 +352,11 @@ GameServer.prototype.JoinRoom = function(player, roomId)
     else {
         room = this.rooms[roomId];
         
+        if (room.HasPlayer(player)){
+            GameLog("重复加入房间!");
+            return;
+        }
+        
         if (room.GetPlayerCount() === room.players.length || room.PlayerCanEnter(player) === false) {
             if (room.GetPlayerCount() === room.players.length) {
                 // 人数已满!

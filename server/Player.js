@@ -33,7 +33,7 @@ Player.prototype.InitCards = function(cards)
     this.data.cards = cards.slice();
     this.data.outputCards.splice(0, this.data.pengCards.length);
     this.data.pengCards.splice(0, this.data.pengCards.length);
-    this.data.gangCards.splice(0, this.data.gangCards.length); 
+    this.data.gangCards.splice(0, this.data.gangCards.length);
     this.data.kanCards.splice(0, this.data.kanCards.length);
     this.data.niuCards.splice(0, this.data.niuCards.length);
     this.data.jiangCards.splice(0, this.data.jiangCards.length);
@@ -435,6 +435,7 @@ Player.prototype.SendGangCards = function(player, card, self, throwCardPlace)
 
     if (toSelf) {
         data.cards = player.data.cards;
+        data.kanCards = player.data.kanCards;
     }
     else {
         var cards = new Array(player.data.cards.length);
@@ -442,6 +443,12 @@ Player.prototype.SendGangCards = function(player, card, self, throwCardPlace)
             cards[i] = 0;
         }
         data.cards = cards;
+        
+        var kanCards = new Array(player.data.kanCards.length);
+        for (var i = 0; i < kanCards.length; ++i) {
+            kanCards[i] = 0;
+        }
+        data.kanCards = kanCards;
     }
     
     if (typeof throwCardPlace !== 'undefined') {
@@ -615,12 +622,23 @@ Player.prototype.SendPlayerInfoByReconnection = function(playerData, status, sel
     if (playerData.pengCards.length > 0) {
         data.pengCards = playerData.pengCards;   // 已碰的牌
     }
+    
     if (playerData.gangCards.length > 0) {
         data.gangCards = playerData.gangCards;   // 已杠的牌
     }
+    
     if (playerData.kanCards.length > 0) {
-        data.kanCards = playerData.kanCards;     // 已砍的牌
+        if (toSelf) {
+            data.kanCards = playerData.kanCards;     // 已砍的牌
+        }else {
+            var kanCards = new Array(playerData.kanCards.length);
+            for (var ki = 0; ki < kanCards.length; ++ki) {
+                kanCards[ki] = 0;
+            }
+            data.kanCards = kanCards;
+        }
     }
+    
     if (playerData.niuCards.length > 0) {
         data.niuCards = playerData.niuCards;     // 已牛的牌
     }
