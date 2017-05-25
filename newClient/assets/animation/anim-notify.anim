@@ -1,0 +1,58 @@
+{
+  "__type__": "cc.AnimationClip",
+  "_name": "anim-notify",
+  "_objFlags": 0,
+  "_rawFiles": null,
+  "_duration": 1.6666666666666667,
+  "sample": 60,
+  "speed": 1,
+  "wrapMode": 1,
+  "curveData": {
+    "props": {
+      "position": [
+        {
+          "frame": 0,
+          "value": [
+            568,
+            678
+          ],
+          "curve": "quadOut"
+        },
+        {
+          "frame": 0.3333333333333333,
+          "value": [
+            568,
+            608
+          ]
+        },
+        {
+          "frame": 1.3333333333333333,
+          "value": [
+            568,
+            608
+          ],
+          "curve": "quadIn"
+        },
+        {
+          "frame": 1.6666666666666667,
+          "value": [
+            568,
+            678
+          ]
+        }
+      ]
+    }
+  },
+  "events": [
+    {
+      "frame": 1.3333333333333333,
+      "func": "onNeedExit",
+      "params": []
+    },
+    {
+      "frame": 1.6666666666666667,
+      "func": "onExitAnim",
+      "params": []
+    }
+  ]
+}

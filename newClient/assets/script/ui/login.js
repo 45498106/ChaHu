@@ -2,7 +2,12 @@ cc.Class({
     extends: cc.Component,
 
     properties: {
-        persistNode : cc.Node,
+        
+        persistNodes : {
+            default : [],
+            type : [cc.Node]
+        },
+        
         buttonsPnl : cc.Node,
         weixinBtn : cc.Button,
         guestBtn : cc.Button,
@@ -10,7 +15,15 @@ cc.Class({
 
     // use this for initialization
     onLoad: function () {
-        cc.game.addPersistRootNode(this.persistNode);
+        
+        // 注册常驻节点 
+        if (typeof window.addPersistRootNode === 'undefined') {
+            for (var i = 0; i < this.persistNodes.length; ++i) {
+                cc.game.addPersistRootNode(this.persistNodes[i]);
+            }
+            window.addPersistRootNode = true;
+        }
+        
         // 开启网络连接  
         GameSocket().Connect(window.GameHost, window.GamePort);
         // 注册事件
@@ -19,6 +32,10 @@ cc.Class({
         GameEvent().OnEvent("LoginSuccess", this.OnLoginSuccess, this);
         
         this.buttonsPnl.active = false;
+        
+        // 播放声音
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playLoginMusic();
     },
     
     OnConnectedServer : function() {
@@ -55,13 +72,15 @@ cc.Class({
             this.GetUniqueID(function(uniqueId){
                 GameSocket().Send("enterGame", {loginType:"guest", uniqueID:uniqueId});
             });
-            this.guestBtn.interactable = false;
+
+            Notify().PlayWaitSrv();
         }
     },
     
     
     OnLoginSuccess : function() {
         cc.director.loadScene('home');
+        Notify().Continue();
     },
     
     GetUniqueID : function(callback) {

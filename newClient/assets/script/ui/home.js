@@ -7,6 +7,8 @@ cc.Class({
         createRoomBtn : cc.Button,
         joinRoomBtn : cc.Button,
         
+        descPanel : cc.Node,
+        
         shareBtn : cc.Button,
         ruleBtn : cc.Button,
         historyBtn : cc.Button,
@@ -39,6 +41,10 @@ cc.Class({
         GameEvent().OnEvent("GetRoomRecordSuccess", this.OnGetRoomRecordSucces, this);
         GameEvent().OnEvent("CreateRoomSuccess", this.OnCreateRoomSuccess, this);
         GameEvent().OnEvent("JoinRoomSuccess", this.OnJoinRoomSucces, this);
+        
+        // 播放声音
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playHomeMusic();
     },
     
     HideAllPnl : function() {
@@ -55,19 +61,24 @@ cc.Class({
     },
     
     OnShare : function() {
-        
+        Notify().Play("加班实现中，敬请期待");
     },
     
     OnRuleDesc : function() {
-        
+        this.descPanel.getComponent("description").OnShow();
+        //Notify().Play("加班实现中，敬请期待");
     },
     
     OnHistory : function() {
-        
+        Notify().Play("加班实现中，敬请期待");
     },
     
     OnSetting : function() {
-        
+        Notify().Play("加班实现中，敬请期待");
+    },
+    
+    OnAddGold : function() {
+        Notify().Play("加班实现中，敬请期待");
     },
     
     OnGetRoomRecordSucces : function() 
@@ -89,8 +100,10 @@ cc.Class({
     },
     
     OnCreateRoomSuccess : function() {
+        Notify().Continue();
         cc.director.loadScene('game');        
     },
+    
 
     // called every frame, uncomment this function to activate update callback
     // update: function (dt) {

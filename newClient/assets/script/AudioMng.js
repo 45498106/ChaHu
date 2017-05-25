@@ -56,8 +56,18 @@ var AudioMng = cc.Class({
             default: null,
             url: cc.AudioClip
         },
+        
+        login : {
+            default: null,
+            url: cc.AudioClip
+        },
 
-        bgm: {
+        home: {
+            default: null,
+            url: cc.AudioClip
+        },
+        
+        game : {
             default: null,
             url: cc.AudioClip
         }
@@ -72,10 +82,21 @@ var AudioMng = cc.Class({
         AudioMng.inst = this;
     },
 
-    playMusic: function() {
-        cc.audioEngine.playMusic( this.bgm, true );
+    playLoginMusic : function() {
+        var id = cc.audioEngine.playMusic( this.login, true );
+        cc.audioEngine.setVolume(id, 0.2);
     },
 
+    playHomeMusic: function() {
+        var id = cc.audioEngine.playMusic( this.home, true );
+        cc.audioEngine.setVolume(id, 0.2);
+    },
+
+    playGameMusic: function() {
+        var id = cc.audioEngine.playMusic( this.game, true );
+        cc.audioEngine.setVolume(id, 0.2);
+    },
+    
     pauseMusic: function() {
         cc.audioEngine.pauseMusic();
     },

@@ -274,6 +274,7 @@ gangCards['Process'] = function (data) {
     player.cards = data.cards.slice();
     player.cards.sort();
     player.gangCards = data.gangCards.slice();
+    player.kanCards = data.kanCards.slice();
     GameData.getCardPlace = place;
    
     // 通知

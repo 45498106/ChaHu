@@ -209,6 +209,10 @@ cc.Class({
         GameEvent().OnEvent('JiangCards', this.OnJiangCards, this);
         GameEvent().OnEvent('HuCards', this.OnHuCards, this);
         GameEvent().OnEvent('LiuJuCards', this.OnLiuJuCards, this);
+        
+        // 播放声音
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playGameMusic();
        
 
         if (GameData.userRoomData.played === 0) {
@@ -1137,7 +1141,11 @@ cc.Class({
             var children = inst.children;
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
-                spr.spriteFrame = CardSpriteFrameCache[cardDir][kanCards[k]];;
+                if (cardDir === 4 && c !== 1) {
+                    spr.spriteFrame = CardSpriteFrameCache[cardDir][kanCards[k]];
+                }else {
+                    spr.spriteFrame = CardSpriteFrameCache[cardDir][10];
+                }
             }
             
             hand.addChild(inst);
@@ -1149,7 +1157,7 @@ cc.Class({
             var children = inst.children;
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
-                spr.spriteFrame = CardSpriteFrameCache[cardDir][pengCards[k]];;
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][pengCards[k]];
             }
             
             hand.addChild(inst);
@@ -1161,7 +1169,7 @@ cc.Class({
             var children = inst.children;
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
-                spr.spriteFrame = CardSpriteFrameCache[cardDir][jiangCards[k]];;
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][jiangCards[k]];
             }
             
             hand.addChild(inst);
@@ -1178,7 +1186,7 @@ cc.Class({
             var children = inst.children;
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
-                spr.spriteFrame = CardSpriteFrameCache[cardDir][45+c];;
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][45+c];
             }
             
             hand.addChild(inst, -hand.children.length);
@@ -1199,7 +1207,7 @@ cc.Class({
             var children = inst.children;
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
-                spr.spriteFrame = CardSpriteFrameCache[cardDir][kanCards[k]];;
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][10];
             }
             
             hand.addChild(inst, -hand.children.length);
@@ -1211,7 +1219,7 @@ cc.Class({
             var children = inst.children;
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
-                spr.spriteFrame = CardSpriteFrameCache[cardDir][pengCards[k]];;
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][pengCards[k]];
             }
             
             hand.addChild(inst, -hand.children.length);
@@ -1223,7 +1231,7 @@ cc.Class({
             var children = inst.children;
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
-                spr.spriteFrame = CardSpriteFrameCache[cardDir][jiangCards[k]];;
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][jiangCards[k]];
             }
             
             hand.addChild(inst, -hand.children.length);

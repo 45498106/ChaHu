@@ -64,6 +64,8 @@ cc.Class({
         var hunCount = (Math.ceil(this.progressBar.progress * 10) / 10) * 100;
         
         GameSocket().Send("createRoom", {ruleId:ruleId, quanId:quanId, hunCount:hunCount});
+        
+        Notify().PlayWaitSrv();
     },
     
     OnSlider : function (event) {

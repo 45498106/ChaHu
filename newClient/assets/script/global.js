@@ -59,6 +59,11 @@ window.AudioMng = function() {
     return audioMng.inst;
 }
 
+window.Notify = function() {
+    var notify = require("notifyAnim");
+    return notify.inst;
+}
+
 
 window.SetSpriteImage = function(sprite, url, localRes) {
     

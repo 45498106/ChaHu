@@ -30,12 +30,14 @@ cc.Class({
     OnJoin : function() {
         // 加入房间
         if (this._input.length !== 6) {
-            GameLog("请输入六位房间号");
+            Notify().Play("请输入六位房间号");
             return;
         }
         
         var roomId = parseInt(this._input);
         GameSocket().Send("joinRoom", { roomId:roomId});
+        
+        Notify().PlayWaitSrv();
     },
     
     ClearNumber : function () {
