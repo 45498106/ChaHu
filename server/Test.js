@@ -1,3 +1,19 @@
+/*
+var score = [3,12,2,2];
+var singleScore = [0,0,0,0];
+
+for (var i =0 ; i < score.length; ++i) {
+    for (var j =0 ; j < score.length; ++j) {
+        if (i !== j) {
+            singleScore[i] += (score[i] - score[j])
+        }
+    }
+}
+
+console.log("结算", singleScore);
+*/
+
+
 var Mahjong = require("./Mahjong.js");
 
 Util = require("../common/Utility.js");

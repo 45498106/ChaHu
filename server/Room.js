@@ -44,6 +44,9 @@ function PlayData()
     this.niuCards = new Array();    // 已牛的牌
     this.jiangCards = new Array();  // 已将的牌
     this.huCards = new Array();     // 可胡的牌
+    this.score = 0;                 // 单局分数
+    this.singleScore = 0;           // 单局结算分数
+    this.totalScore = 0;            // 总局结算分数
     this.updateHucards = true;
     this.isHuCards = false;
     this.canNiu = false;
@@ -68,9 +71,14 @@ function Room()
     this.playing = false;   // 游戏中
     this.pause = false;     // 玩家离线,游戏暂停
     this.state = 1;         // (摸牌状态 1, 打牌状态2, 结算状态3)
+    
+    // 创建时间
+    var now = (new Date()).getTime();
+    var time = Math.ceil(now / MinuteToMicroSecond);
+    this.time = time;
 }
 
-Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playCount, costMoney)
+Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playCount, costMoney, bankerCount)
 {
     this.id = id;
     this.roomName = "room:"+this.id;
@@ -80,11 +88,7 @@ Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playC
     this.hunCount = hunCount;
     this.playCount = playCount;
     this.costMoney = costMoney;
-    
-    // 创建时间
-    var now = (new Date()).getTime();
-    var time = Math.ceil(now / MinuteToMicroSecond);
-    this.time = time;
+    this.bankerCount = bankerCount;   // 庄记数
 }
 
 Room.prototype.RuleHasZhuangXian = function() {
@@ -105,6 +109,23 @@ Room.prototype.RuleCanJiang = function() {
     if ((this.ruleId & 4) === 4) {
         return true;
     }
+    return false;
+}
+
+Room.prototype.IsFullQuan = function() {
+    if (this.quanId === 1) {
+        // 1圈,4次轮庄.
+        if (this.bankerCount >= 4) {
+            return true;
+        }
+    }
+    else if (this.quanId === 2) {
+        // 4圈,16次轮庄.
+        if (this.bankerCount >= 16) {
+            return true;
+        }
+    }
+    
     return false;
 }
 
@@ -367,7 +388,10 @@ Room.prototype.AddPlayer = function(player)
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'piaoCards', function(data) {
         if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
-        
+        if (player.data.piao === false && player.CanPiao()) {
+            player.data.piao = true;
+            me.BroadcastPlayers(player, "piaoCards", player.data.place);
+        }
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'passCards', function(data) {
@@ -482,6 +506,8 @@ Room.prototype.BroadcastPlayers = function(who, action, argument)
         IO.to(this.roomName).emit(action, argument);
     }else if (action === 'playerOffline') {
         IO.to(this.roomName).emit(action, argument);
+    }else if (action === 'piaoCards') {
+        IO.to(this.roomName).emit(action, argument);
     }
 }
 
@@ -513,8 +539,6 @@ Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
             player.socket.emit(action, Player.prototype.SendAddNiuCard(who, argument, player));
         }else if(action === "jiangCards") {
             player.socket.emit(action, Player.prototype.SendJiangCards(who, argument, player, argument2));
-        }else if(action === "liuJu") {
-            player.socket.emit(action, Player.prototype.SendLiuJuCards(who, argument, player));
         }
     }
 }
@@ -540,7 +564,11 @@ Room.prototype.SendSendPlayersByReconnection = function(who)
     var roomInfo = {
         "bankerPlace" : this.bankerPlace, 
         "playCount" : this.playCount,
-        "getCardPlace" : this.getCardPlace
+        "getCardPlace" : this.getCardPlace,
+        "totalScore" : [this.playData[0].totalScore,
+                        this.playData[1].totalScore,
+                        this.playData[2].totalScore,
+                        this.playData[3].totalScore]
     }
    
     var state = {};    
@@ -606,7 +634,7 @@ Room.prototype.FixCards = function() {
         }
     }
     
-    var fixCards = [45,46,45,11,11,11,22,22,23,23,24,24,31,34,26,46,46,47,26,27,28,28,28];
+    var fixCards = [32,32,32,11,11,11,22,22,23,23,24,24,31,34,26,46,46,47,26,27,28,28,28];
     var t;
     for (var i = 0; i < fixCards.length; ++i) {
         for (var j = i; j < this.cards.length; ++j) {
@@ -623,7 +651,7 @@ Room.prototype.FixCards = function() {
 }
 
 // 新一局游戏
-Room.prototype.NewGame = function() 
+Room.prototype.NewGame = function()
 {
     this.cards = staticCards.slice();
     this.cardsIndex = 0;
@@ -638,6 +666,11 @@ Room.prototype.NewGame = function()
         for (var pi = 0; pi < 4; ++pi) {
             this.playData[pi] = new PlayData();
             this.players[pi].AttachData(this.playData[pi]);
+            
+            if (this.players[pi].id === this.createUserId) {
+                // 默认房主为庄
+                this.bankerPlace = pi;
+            }
         }
     }
  
@@ -646,10 +679,9 @@ Room.prototype.NewGame = function()
         this.costMoney = 1;
     }
     
-    this.RandomCards();
-    //this.FixCards();
+    //this.RandomCards();
+    this.FixCards();
     
-    this.bankerPlace = 0;
     // 测试
     /*for (var p = 0; p < 4; ++p) {
         if (this.players[p].id === this.createUserId) {
@@ -662,9 +694,17 @@ Room.prototype.NewGame = function()
         }
     }*/
     
-    //this.bankerPlace = Util.RandomRange(0, 3);
-    this.BroadcastPlayers(null, "newGame", { "bankerPlace" : this.bankerPlace, 
-                    "playCount" : this.playCount, "played" : 1 });
+    var roomInfo = {
+        "bankerPlace" : this.bankerPlace,
+        "playCount" : this.playCount,
+        "played" : 1,
+        "totalScore" : [this.playData[0].totalScore,
+                        this.playData[1].totalScore,
+                        this.playData[2].totalScore,
+                        this.playData[3].totalScore]
+    }
+    
+    this.BroadcastPlayers(null, "newGame", roomInfo);
     
     // 发牌
     var initCards = new Array(13);
@@ -689,6 +729,15 @@ Room.prototype.NewGame = function()
     this.PlayerAddCard();
 }
 
+// 下庄
+Room.prototype.ChangeZhuang = function() {
+    ++this.bankerPlace;
+    if (this.bankerPlace > 3) {
+        this.bankerPlace = 0;
+    }
+}
+
+// 下家抓牌
 Room.prototype.DoBackCardPlace = function() {
     this.getCardPlace = this.getCardPlace + 1;
     if (this.getCardPlace === 4) { 
@@ -699,9 +748,10 @@ Room.prototype.DoBackCardPlace = function() {
 Room.prototype.PlayerAddCard = function() {
     // 摸牌状态
     this.state = 1;
-    if (this.cardsIndex + 1 == this.cards.length) {
+    if (this.cardsIndex + 1 == (this.cards.length - 16)) {
         // 流局
-        Room.prototype.SendLiuJuCards(this);
+        Room.prototype.SendAccountsCards(this, true);
+        this.ChangeZhuang();
         this.GameEnd();
         // 新一局准备.
         this.CancelPlayerReady();
@@ -869,15 +919,23 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
     switch(select) {
         case enum_Hu: {
             GameLog("玩家" + player.name + "胡牌了");
+            player.HuCards();
+            me.CalcPlayersScore(place);
+            // 通知
             if (selfCheck) {
                 me.BroadcastPlayers2(player, "huCards", me.cards[me.cardsIndex - 1]);
             }else {
                 me.BroadcastPlayers2(player, "huCards", me.lastThrowCard, me.lastThrowPlace);
             }
-            // 新一局准备.
+            // 结算
+            Room.prototype.SendAccountsCards(this, false);
+            
             me.GameEnd();
-            me.CancelPlayerReady();
-            me.SendPlayerReady();
+            if (me.IsFullQuan() === false) {
+                // 新一局准备.
+                me.CancelPlayerReady();
+                me.SendPlayerReady();
+            }
         }break;
         case enum_Gang: {
             if (selfCheck) {
@@ -1053,12 +1111,22 @@ Room.prototype.TriggerSelfCheck = function(player)
     }
 }
 
+Room.prototype.PlayerGangCards = function (player) {
+    // 玩家碰牌
+    player.PengCards(this.lastThrowCard);
+    // 触发检测
+    this.TriggerSelfCheck(player);
+    // 通知
+    this.BroadcastPlayers2(player, "pengCards", this.lastThrowCard, this.lastThrowPlace);
+    // 改变出牌位置
+    this.getCardPlace = player.data.place;
+}
 
 Room.prototype.PlayerPengCards = function (player) {
     // 玩家碰牌
     player.PengCards(this.lastThrowCard);
     // 触发检测
-    // this.TriggerSelfCheck(player);
+    this.TriggerSelfCheck(player);
     // 通知
     this.BroadcastPlayers2(player, "pengCards", this.lastThrowCard, this.lastThrowPlace);
     // 改变出牌位置
@@ -1068,6 +1136,8 @@ Room.prototype.PlayerPengCards = function (player) {
 Room.prototype.PlayerJiangCards = function (player) {
     // 玩家将牌
     player.AddJiangCard(this.lastThrowCard);
+    // 触发检测
+    this.TriggerSelfCheck(player);
     // 通知
     this.BroadcastPlayers2(player, "jiangCards", this.lastThrowCard, this.lastThrowPlace);
     // 改变出牌位置
@@ -1114,6 +1184,40 @@ Room.prototype.RemoveLastOneInPlayerOutputCards = function() {
     player.data.outputCards.pop();
 }
 
+Room.prototype.CalcPlayersScore = function(winnerPlace) {
+    var me = this;
+    var player, other, tempScore;
+    var hasZhuangXian = this.RuleHasZhuangXian();
+    var winner = me.players[winnerPlace];
+    for (var i = 0; i < me.players.length; ++i) {
+        player = me.players[i];
+        for (var j = 0; j < me.players.length; ++j) {
+            if (i !== j) {
+                other = me.players[j];
+                
+                tempScore = player.data.score - other.data.score;
+                if (hasZhuangXian && (i === this.bankerPlace || j === this.bankerPlace)) {
+                    // 庄闲翻倍
+                    tempScore *= 2;
+                }
+                
+                if (winner.piao) {
+                    // 飘牌翻倍 + 荤低
+                    tempScore *= 2;
+                    tempScore += this.hunCount;
+                }
+                
+                player.data.singleScore += tempScore;
+            }
+        }
+        player.data.totalScore += player.data.singleScore;
+    }
+    
+    if (winnerPlace !== this.bankerPlace) {
+        me.ChangeZhuang();
+    }
+}
+
 Room.prototype.GameEnd = function() {
     this.state = 3; // 结算状态
     this.playing = false;
@@ -1142,18 +1246,19 @@ Room.prototype.SendRoomInfo = function(room) {
     return JSON.stringify(data);
 }
 
-Room.prototype.SendLiuJuCards = function(room) {
+Room.prototype.SendAccountsCards = function(room, liuju) {
     
     var datas = [];
     var player = null;
     for (var i = 0; i < room.players.length; ++i){
         player = room.players[i];
-        datas.push(Player.prototype.SendLiuJuCards(player));
+        datas.push(Player.prototype.SendAllCards(player));
     }
-
+    
+    var status = liuju ? 1 : 2;
     for (var j = 0; j < room.players.length; ++j){
         player = room.players[j];
-        player.socket.emit("liuJu", datas);
+        player.socket.emit("accounts", { status : status , playData : datas });
     }
 }
 
@@ -1166,7 +1271,8 @@ Room.prototype.DBSaveRoomInfo = function(room) {
                     "quanId"            : room.quanId,
                     "hunCount"          : room.hunCount,
                     "playCount"         : room.playCount,
-                    "costMoney"         : room.costMoney};
+                    "costMoney"         : room.costMoney,
+                    "bankerCount"       : room.bankerCount};
     
     return data;
 }

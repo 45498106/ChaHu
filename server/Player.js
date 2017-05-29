@@ -38,8 +38,11 @@ Player.prototype.InitCards = function(cards)
     this.data.niuCards.splice(0, this.data.niuCards.length);
     this.data.jiangCards.splice(0, this.data.jiangCards.length);
     
+    this.data.score = 0;
+    this.data.singleScore = 0;
     this.data.firstAdd = true;
-    this.data.piao = false;    
+    this.data.canNiu = false;
+    this.data.piao = false
     this.data.updateHucards = true;
 }
 
@@ -84,19 +87,41 @@ Player.prototype.CanJiangCards = function(card) {
     return Mahjong.CanJiangCards(this.data.cards, card);
 }
 
+Player.prototype.CanPiao = function() {
+    if (this.data.cards.length === 1){
+        return true;
+        
+    }
+    else if (this.data.cards.length === 4) {
+        if (this.data.cards[0] === this.data.cards[1] && 
+            this.data.cards[2] === this.data.cards[3]) {
+            return true;
+        }
+        
+        if  (this.data.cards[0] === this.data.cards[3] && 
+            this.data.cards[2] === this.data.cards[1]) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 Player.prototype.AddCard = function(card){
     this.CalcHuCard(card);
     
+    this.data.cards.push(card);
+    
     if (this.room.RuleCanNiu() && this.data.firstAdd && Mahjong.HasNiuCardsByHand(this.data.cards)) {
         this.data.canNiu = true;
-        this.data.firstAdd = false;
     }
-
-    this.data.cards.push(card);
+    
+    this.data.firstAdd = false;
 }
 
 Player.prototype.AddNiuCard = function(card) {
     this.data.niuCards.push(card);
+    this.data.score += 5;
 }
 
 Player.prototype.AddJiangCard = function(card) {
@@ -117,6 +142,14 @@ Player.prototype.ThrowCard = function(card) {
 }
 
 Player.prototype.PengCards = function(card) {
+
+    // 计算分数
+    if (Mahjong.IsFirstType(card)) {
+        this.data.score += 2;
+    }else {
+        this.data.score += 1;
+    }
+
     this.data.pengCards.push(card);
     this.data.pengCards.push(card);
     this.data.pengCards.push(card);
@@ -133,6 +166,21 @@ Player.prototype.PengCards = function(card) {
 }
 
 Player.prototype.GangCards = function(card, selfGang) {
+
+    // 计算分数
+    if (Mahjong.IsFirstType(card)) {
+        if (selfGang) {
+            this.data.score += 30;
+        } else {
+            this.data.score += 20;
+        }
+    }else {
+        if (selfGang) {
+            this.data.score += 6;
+        } else {
+            this.data.score += 4;
+        }
+    }
 
     var gangCardArray = [];
     if (Mahjong.CanGangCards(this.data.cards, card) || Mahjong.HasGangCardsByHand(this.data.cards, gangCardArray)) 
@@ -198,6 +246,13 @@ Player.prototype.KanCards = function() {
     var cardArray = [];
     if (Mahjong.HasKanCardsByHand(this.data.cards, cardArray))
     {
+        // 计算分数
+        if (Mahjong.IsFirstType(card)) {
+            this.data.score += 10;
+        } else {
+            this.data.score += 2;
+        }
+    
         var card = cardArray[0];
 
         this.data.kanCards.push(card);
@@ -228,14 +283,23 @@ Player.prototype.NiuCards = function(countArray, addCards) {
         }
     }
     
+    // 牛牌10分
+    this.data.score += 10;
+    
     if (typeof addCards !== 'undefined') {
         for (var k = 0; k < addCards.length; ++k) {
             this.AddCard(addCards[k]);
+            // 补牛5分
+            this.data.score += 5;
         }
     }
     
     this.data.canNiu = false;
     this.data.updateHucards = true;
+}
+
+Player.prototype.HuCards = function() {
+    this.data.score += 10;
 }
 
 Player.prototype.GetHuCards = function() {
@@ -397,6 +461,10 @@ Player.prototype.SendThrowCard = function(player, card, self)
 
     if (self.data.place !== player.data.place) {
         self.CalcThrowCradOperation(data, card, player.data.place);
+    }else {
+        if (player.data.piao === false && player.CanPiao()) {
+            data['piao'] = 1;
+        }
     }
 
     return data;
@@ -410,6 +478,19 @@ Player.prototype.SendPengCards = function(player, card, self, throwCardPlace)
                     "pengCards"         : player.data.pengCards };
     if (toSelf) {
         data.cards = player.data.cards;
+        
+        // 是否杠牌 
+        if (Mahjong.HasGangCardsByHand(self.data.cards)) {
+            data['gang'] = 1;
+        }
+        
+        if (Mahjong.HasKanCardsByHand(self.data.cards)) {
+            data['kan'] = 1;
+        }
+        
+        if (self.data.canNiu) {
+            data['niu'] = 1;
+        }
     }
     else {
         var cards = new Array(player.data.cards.length);
@@ -436,6 +517,19 @@ Player.prototype.SendGangCards = function(player, card, self, throwCardPlace)
     if (toSelf) {
         data.cards = player.data.cards;
         data.kanCards = player.data.kanCards;
+        
+        // 是否杠牌 
+        if (Mahjong.HasGangCardsByHand(self.data.cards)) {
+            data['gang'] = 1;
+        }
+        
+        if (Mahjong.HasKanCardsByHand(self.data.cards)) {
+            data['kan'] = 1;
+        }
+        
+        if (self.data.canNiu) {
+            data['niu'] = 1;
+        }
     }
     else {
         var cards = new Array(player.data.cards.length);
@@ -467,6 +561,19 @@ Player.prototype.SendJiangCards = function(player, card, self, throwCardPlace)
                     
     if (toSelf) {
         data.cards = player.data.cards;
+        
+        // 是否杠牌 
+        if (Mahjong.HasGangCardsByHand(self.data.cards)) {
+            data['gang'] = 1;
+        }
+        
+        if (Mahjong.HasKanCardsByHand(self.data.cards)) {
+            data['kan'] = 1;
+        }
+        
+        if (self.data.canNiu) {
+            data['niu'] = 1;
+        }
     }else {
         var cards = new Array(player.data.cards.length);
         for (var i = 0; i < cards.length; ++i) {
@@ -486,7 +593,7 @@ Player.prototype.SendHuCards = function(player, card, self, throwCardPlace)
 {
     var data = {    "place"             : player.data.place,
                     "card"              : card,
-                    "cards"             : player.data.cards };
+                    "cards"             : player.data.cards }
     
     if (player.data.pengCards.length > 0) {
         data.pengCards = player.data.pengCards;
@@ -525,7 +632,7 @@ Player.prototype.SendKanCards = function(player, card, self)
         data.cards = player.data.cards;
         data.kanCards = player.data.kanCards;
         
-        // 检测是否胡牌,是否杠牌 
+        // 是否杠牌 
         if (Mahjong.HasGangCardsByHand(self.data.cards)) {
             data['gang'] = 1;
         }
@@ -669,10 +776,12 @@ Player.prototype.SendPlayerInfoByReconnection = function(playerData, status, sel
 }
 
 
-Player.prototype.SendLiuJuCards = function(player) 
+Player.prototype.SendAllCards = function(player) 
 {
     var data = {    "place"             : player.data.place,
-                    "cards"             : player.data.cards };
+                    "score"             : player.data.score,
+                    "singleScore"       : player.data.singleScore,
+                    "cards"             : player.data.cards, };
     
     if (player.data.pengCards.length > 0) {
         data.pengCards = player.data.pengCards;
@@ -692,10 +801,6 @@ Player.prototype.SendLiuJuCards = function(player)
     
     if (player.data.jiangCards.length > 0) {
         data.jiangCards = player.data.jiangCards;
-    }
-    
-    if (typeof throwCardPlace !== 'undefined') {
-        data.throwCardPlace = throwCardPlace;
     }
 
     return data;

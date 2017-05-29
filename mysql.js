@@ -48,11 +48,16 @@ MySQL.prototype.Init = function (host, port, database, user, password)
     });
     
     connection.on('error', function(error) {
-        GameLog("数据库抛出一个错误.");
-        if(error.code === 'PROTOCOL_CONNECTION_LOST') {     // Connection to the MySQL server is usually
+        GameLog("数据库抛出一个错误."+error.code);
+        if (error.code === 'ECONNRESET') {
+            me.connected = false;
+            setTimeout( function(){  
+                me.Init(host, port, database, user, password);  
+            }, 60000);
+        }else if(error.code === 'PROTOCOL_CONNECTION_LOST') {     // Connection to the MySQL server is usually
             GameLog('数据库断开连接(error code : ' + error.code + ').');
             me.connected = false;
-            me.Init(host, database, user, password);        // lost due to either server restart, or a
+            me.Init(host, port, database, user, password);        // lost due to either server restart, or a
         } else {                                            // connnection idle timeout (the wait_timeout
             throw error;                                    // server variable configures this)
         }

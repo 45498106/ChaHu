@@ -293,7 +293,7 @@ GameServer.prototype.CreateRoom = function(player, ruleId, quanId, hunCount)
     
     var userId = player.id;
     var room = new Room();
-    room.Init(roomId, userId, ruleId, quanId, hunCount, 0, 0);
+    room.Init(roomId, userId, ruleId, quanId, hunCount, 0, 0, 0);
     this.rooms[roomId] = room;
    
     // 发送创建成功.
@@ -343,7 +343,7 @@ GameServer.prototype.JoinRoom = function(player, roomId)
                 room.AddPlayer(player);
             }
             else {
-                player.socket.emit("error", { msg : "房间不存在!"});
+                player.socket.emit("gameError", { msg : "房间不存在!"});
                 return;
             }
         });

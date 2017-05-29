@@ -122,7 +122,6 @@ function HasKanCards(cards, card) {
     return count === 3;
 }
 
-
 // 是否有坎牌
 function HasKanCardsByHand(handCards, cardArray) {
     var c = new Array(50);
@@ -315,6 +314,26 @@ function GetJiangHuCards(handCards, huCards) {
     return hu;
 }
 
+function IsFirstType(card) {
+    if (card === 11 || card === 19)  {
+        return true;
+    }
+    
+    if (card === 21 || card === 29) {
+        return true;
+    }
+    
+    if (card === 31 || card === 39) {
+        return true;
+    }
+
+    if (card >= 45 && card <= 47) {
+        return true;
+    }
+    
+    return false;
+}
+
 if(typeof module !== 'undefined') {
     module.exports.CanPengCards = CanPengCards;
     module.exports.CanGangCards = CanGangCards;
@@ -327,4 +346,5 @@ if(typeof module !== 'undefined') {
     module.exports.HasNiuCardsByHand = HasNiuCardsByHand;
     module.exports.GetHuCards = GetHuCards;
     module.exports.GetJiangHuCards = GetJiangHuCards;
+    module.exports.IsFirstType = IsFirstType;
 }
