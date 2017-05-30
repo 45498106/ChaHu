@@ -172,6 +172,15 @@ newGame['Process'] = function (data) {
     GameData.userRoomData.playCount = data.playCount;
     GameData.userRoomData.played = data.played;
     
+    if (typeof data.totalScore === 'object') {
+        for (var i = 0; i < GameData.players.length; ++i) {
+            GameData.players[i].totalScore = data.totalScore[i];
+        }
+    }
+    
+    GameData.huPlace = -1;
+    GameData.huCard = 0;
+    
     GameEvent().SendEvent('NewGame');
 };
 
@@ -349,6 +358,19 @@ jiangCards['Process'] = function (data) {
 
 MessageHandler.Add(jiangCards);
 
+
+////////////////////////////////////////////////////////////////////////////////
+var piaoCards = {};
+piaoCards['interest'] = "piaoCards";
+piaoCards['Process'] = function (data) {
+    GameLog(data);
+    //var place = data;
+    // 通知
+    GameEvent().SendEvent('PiaoCards', data);
+};
+
+MessageHandler.Add(piaoCards);
+
 ////////////////////////////////////////////////////////////////////////////////
 var huCards = {};
 huCards['interest'] = "huCards";
@@ -386,6 +408,8 @@ huCards['Process'] = function (data) {
 
     
     GameData.getCardPlace = -1;
+    GameData.huPlace = place;
+    GameData.huCard = card;
     
     // 通知
     GameEvent().SendEvent('HuCards', data);
@@ -486,6 +510,13 @@ resumeGame['Process'] = function (data) {
         
         GameData.players[newPlayer.place] = newPlayer;
     }
+    
+    if (typeof roomInfo.totalScore === 'object') {
+        for (var i = 0; i < GameData.players.length; ++i) {
+            GameData.players[i].totalScore = roomInfo.totalScore[i];
+        }
+    }
+    
     GameData.resumeGame = true;
 };
 
@@ -507,17 +538,21 @@ playerReconnection['Process'] = function (data) {
 MessageHandler.Add(playerReconnection);
 
 ////////////////////////////////////////////////////////////////////////////////
-var liuJuCards = {};
-liuJuCards['interest'] = "liuJu";
-liuJuCards['Process'] = function (datas) {
+var accounts = {};
+accounts['interest'] = "accounts";
+accounts['Process'] = function (datas) {
     GameLog(datas);
 
     var place, data;
-    for (var i = 0; i < datas.length; ++i) {
-        data = datas[i];
+    for (var i = 0; i < datas.playData.length; ++i) {
+        data = datas.playData[i];
         place = data.place;
         
+        
         var player = GameData.players[place];
+        
+        player.score = data.score;
+        player.singleScore = data.singleScore;
         
         player.cards = data.cards.slice();
         player.cards.sort();
@@ -545,8 +580,11 @@ liuJuCards['Process'] = function (datas) {
     
     GameData.getCardPlace = -1;
     // 通知
-    GameEvent().SendEvent('LiuJuCards', data);
+    GameEvent().SendEvent('Accounts', datas);
 };
 
-MessageHandler.Add(liuJuCards);
+MessageHandler.Add(accounts);
+
+
+
 

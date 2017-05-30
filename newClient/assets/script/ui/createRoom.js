@@ -29,15 +29,13 @@ cc.Class({
         this.closeBtn.node.on('click', this.OnHide, this);
         this.createRoomBtn.node.on('click', this.OnCreateRoom, this);
         
-        this.sliderBar.progress = 0;
-        this.hunCount.string = '0';
+        this.sliderBar.progress = 0.2;
+        this.hunCount.string = '20';
         this.progressBar.progress = this.sliderBar.progress;
         this.createRoomBtn.interactable = true;
         
-        this.ruleRadioButton[0].check();
-        this._ruleToggleId = 1;
-        this.juRadioButton[0].check();
-        this._juToggleId = 1;
+        this.juRadioButton[1].check();
+        this._juToggleId = 2;
     },
     
     OnShow : function() {

@@ -4,7 +4,7 @@ var notifyNode = cc.Class({
     properties: {
         lable : cc.Label,
         needWait : {
-            default : false,
+            default : cc.False,
             type : cc.Boolean,
         }
     },

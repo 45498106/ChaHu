@@ -12,6 +12,11 @@ function Player(){
     this.kanCards = null;
     this.jiangCards = null;
     this.outputCards = null;
+    
+    
+    this.score = 0;
+    this.singleScore = 0;
+    this.totalScore = 0;
 }
 
 Player.prototype.Clear = function() {
@@ -22,6 +27,9 @@ Player.prototype.Clear = function() {
     this.kanCards = null;
     this.jiangCards = null;
     this.outputCards = null;
+    
+    this.score = 0;
+    this.singleScore = 0;
 }
 
 Player.prototype.Init = function(id, place, name, headUrl) {

@@ -13,7 +13,8 @@
     	selfPlace : -1,
     	players : [null,null,null,null],
         getCardPlace : -1,
-        bankerPlace : -1, // 庄
+        huPlace : -1,
+        huCard : 0,
         needFlushCard : false,
         resumeGame : false,
         selfOperation : null,

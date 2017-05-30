@@ -143,6 +143,13 @@ Socket.prototype.Connect =  function (address, port, router)
                 clearInterval(heartbeatHandler);
                 heartbeatHandler = null;
             }
+            //self.Connect(address, port, router);
+        });
+        
+        socket.on('error', function(event) {
+           self.connected = false;
+           GameEvent().SendEvent('socket throw error');
+           GameLog("webSocket throw a error"+event);
         });
         
         // 注册handle

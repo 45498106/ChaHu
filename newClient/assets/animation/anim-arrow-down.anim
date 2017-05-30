@@ -3,7 +3,7 @@
   "_name": "anim-arrow-down",
   "_objFlags": 0,
   "_rawFiles": null,
-  "_duration": 0.4166666666666667,
+  "_duration": 0.3333333333333333,
   "sample": 60,
   "speed": 1,
   "wrapMode": 1,
@@ -22,15 +22,24 @@
           "value": [
             0,
             0
-          ],
-          "curve": "quartIn"
+          ]
         },
         {
-          "frame": 0.4166666666666667,
+          "frame": 0.3333333333333333,
           "value": [
             0,
-            -200
+            -262
           ]
+        }
+      ],
+      "x": [
+        {
+          "frame": 0,
+          "value": 0
+        },
+        {
+          "frame": 0.3333333333333333,
+          "value": 0
         }
       ]
     }

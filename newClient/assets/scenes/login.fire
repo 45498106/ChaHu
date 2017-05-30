@@ -268,6 +268,9 @@
     "addNiuAudio": {
       "__uuid__": "57826da5-f374-4aa1-aadc-dd917f31dc16"
     },
+    "tingAudio": {
+      "__uuid__": "1d8dcc3e-f237-4860-9f43-2deb3d90849e"
+    },
     "huAudio": {
       "__uuid__": "9e0f4eaa-c196-4d63-9ffe-303b831c4db0"
     },
@@ -1320,7 +1323,7 @@
     "_tag": -1,
     "_opacityModifyRGB": false,
     "_id": "394dfqjWA1Ofas1+00qtxsC",
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 35
@@ -1477,7 +1480,7 @@
     "_tag": -1,
     "_opacityModifyRGB": false,
     "_id": "d1a72Mq7TZJtamASqBLB51+",
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 43

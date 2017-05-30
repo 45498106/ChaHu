@@ -96,6 +96,7 @@ cc.Class({
     },
     
     OnJoinRoomSucces : function() {
+        Notify().Continue();
         cc.director.loadScene('game');        
     },
     

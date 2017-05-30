@@ -41,6 +41,11 @@ var AudioMng = cc.Class({
             default: null,
             url: cc.AudioClip
         },
+
+        tingAudio : {
+            default: null,
+            url : cc.AudioClip
+        },
         
         huAudio: {
             default: null,
@@ -145,6 +150,10 @@ var AudioMng = cc.Class({
     
     playAddNiu : function() {
         this._playSFX(this.addNiuAudio);
+    },
+
+    playTing : function() {
+        this._playSFX(this.tingAudio);
     },
     
     playHu : function() {
