@@ -31,7 +31,7 @@ Player.prototype.AttachData = function(gameData)
 Player.prototype.InitCards = function(cards)
 {
     this.data.cards = cards.slice();
-    this.data.outputCards.splice(0, this.data.pengCards.length);
+    this.data.outputCards.splice(0, this.data.outputCards.length);
     this.data.pengCards.splice(0, this.data.pengCards.length);
     this.data.gangCards.splice(0, this.data.gangCards.length);
     this.data.kanCards.splice(0, this.data.kanCards.length);
@@ -42,7 +42,8 @@ Player.prototype.InitCards = function(cards)
     this.data.singleScore = 0;
     this.data.firstAdd = true;
     this.data.canNiu = false;
-    this.data.piao = false
+    this.data.piao = false;
+    this.data.piaoCard = 0;
     this.data.updateHucards = true;
 }
 
@@ -166,23 +167,7 @@ Player.prototype.PengCards = function(card) {
 }
 
 Player.prototype.GangCards = function(card, selfGang) {
-
-    // 计算分数
-    if (Mahjong.IsFirstType(card)) {
-        if (selfGang) {
-            this.data.score += 30;
-        } else {
-            this.data.score += 20;
-        }
-    }else {
-        if (selfGang) {
-            this.data.score += 6;
-        } else {
-            this.data.score += 4;
-        }
-    }
-
-    var gangCardArray = [];
+    var gangCardArray = [], needRemove = selfGang;
     if (Mahjong.CanGangCards(this.data.cards, card) || Mahjong.HasGangCardsByHand(this.data.cards, gangCardArray)) 
     {
         if (gangCardArray.length > 0) {
@@ -195,7 +180,7 @@ Player.prototype.GangCards = function(card, selfGang) {
             Util.ArrayRemoveElemnt(this.data.cards, gangCardArray[0]);
             Util.ArrayRemoveElemnt(this.data.cards, gangCardArray[0]);
             Util.ArrayRemoveElemnt(this.data.cards, gangCardArray[0]);
-            selfGang = false;
+            needRemove = false;
         }else {
             this.data.gangCards.push(card);
             this.data.gangCards.push(card);
@@ -205,6 +190,21 @@ Player.prototype.GangCards = function(card, selfGang) {
             Util.ArrayRemoveElemnt(this.data.cards, card);
             Util.ArrayRemoveElemnt(this.data.cards, card);
             Util.ArrayRemoveElemnt(this.data.cards, card);
+        }
+        
+        // 计算分数
+        if (Mahjong.IsFirstType(card)) {
+            if (selfGang) {
+                this.data.score += 30;
+            } else {
+                this.data.score += 20;
+            }
+        }else {
+            if (selfGang) {
+                this.data.score += 6;
+            } else {
+                this.data.score += 4;
+            }
         }
     }
     /* 查胡麻将,碰了不能杠
@@ -229,11 +229,26 @@ Player.prototype.GangCards = function(card, selfGang) {
         Util.ArrayRemoveElemnt(this.data.kanCards, card);
         Util.ArrayRemoveElemnt(this.data.kanCards, card);
         Util.ArrayRemoveElemnt(this.data.kanCards, card);
+        
+        // 计算分数
+        if (Mahjong.IsFirstType(card)) {
+            if (selfGang) {
+                this.data.score += 20;
+            } else {
+                this.data.score += 18;
+            }
+        }else {
+            if (selfGang) {
+                this.data.score += 4;
+            } else {
+                this.data.score += 2;
+            }
+        }
     }
     
     this.data.updateHucards = true;
     
-    if (selfGang) {
+    if (needRemove) {
         Util.ArrayRemoveElemnt(this.data.cards, card);
     }
     // 杠牌过后,可能不能牛了
@@ -246,14 +261,14 @@ Player.prototype.KanCards = function() {
     var cardArray = [];
     if (Mahjong.HasKanCardsByHand(this.data.cards, cardArray))
     {
+        var card = cardArray[0];
+        
         // 计算分数
         if (Mahjong.IsFirstType(card)) {
             this.data.score += 10;
         } else {
             this.data.score += 2;
         }
-    
-        var card = cardArray[0];
 
         this.data.kanCards.push(card);
         this.data.kanCards.push(card);
@@ -322,14 +337,14 @@ Player.prototype.CalcGetCradOperation = function(data, card) {
     var self = this;
     
     // 检测是否胡牌,是否杠牌
-    if (Mahjong.HasGangCardsByHand(self.data.cards) ||
+    if (self.data.piao === false && (Mahjong.HasGangCardsByHand(self.data.cards) ||
         Mahjong.HasGangCards(self.data.cards, card) || 
-        Mahjong.CanGangCards(self.data.kanCards, card) ) {
+        Mahjong.CanGangCards(self.data.kanCards, card)) ) {
         data['gang'] = 1;
     }
     
-    if (Mahjong.HasKanCardsByHand(self.data.cards) || 
-        Mahjong.HasKanCards(self.data.cards, card) ){
+    if (self.data.piao === false && (Mahjong.HasKanCardsByHand(self.data.cards) || 
+        Mahjong.HasKanCards(self.data.cards, card)) ){
         data['kan'] = 1;
     } 
     
@@ -347,16 +362,16 @@ Player.prototype.CalcGetCradOperation = function(data, card) {
 
 Player.prototype.CalcThrowCradOperation = function(data, card, throwCardPlace) {
     var self = this;
-    if (Mahjong.CanPengCards(self.data.cards, card)) {
+    if (self.data.piao === false && Mahjong.CanPengCards(self.data.cards, card)) {
         data['peng'] = 1;
     }
     
-    if (Mahjong.CanGangCards(self.data.cards, card) ||
-        Mahjong.CanGangCards(self.data.kanCards, card)) {
+    if (self.data.piao === false && (Mahjong.CanGangCards(self.data.cards, card) ||
+        Mahjong.CanGangCards(self.data.kanCards, card))) {
         data['gang'] = 1;
     }
 
-    if (self.room.RuleCanJiang()) {
+    if (self.room.RuleCanJiang() && self.data.piao === false) {
         var nextPlace = throwCardPlace + 1;
         if (nextPlace === 4) { 
             nextPlace = 0; 
@@ -464,6 +479,11 @@ Player.prototype.SendThrowCard = function(player, card, self)
     }else {
         if (player.data.piao === false && player.CanPiao()) {
             data['piao'] = 1;
+        }
+        
+        var huCards = self.GetHuCards();
+        if (huCards.length > 0) {
+            data['huCards'] = huCards;
         }
     }
 
