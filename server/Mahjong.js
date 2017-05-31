@@ -347,4 +347,5 @@ if(typeof module !== 'undefined') {
     module.exports.GetHuCards = GetHuCards;
     module.exports.GetJiangHuCards = GetJiangHuCards;
     module.exports.IsFirstType = IsFirstType;
+    module.exports.IsValidCard = IsValidCard;
 }

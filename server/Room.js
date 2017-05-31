@@ -947,7 +947,7 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
         case enum_Hu: {
             GameLog("玩家" + player.name + "胡牌了");
             player.HuCards();
-            me.CalcPlayersScore(place);
+            me.CalcPlayersScore(place, selfCheck);
             // 通知
             if (selfCheck) {
                 me.BroadcastPlayers2(player, "huCards", me.cards[me.cardsIndex - 1]);
@@ -1013,37 +1013,6 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
         }break;
     }
 }
-
-/*
-Room.prototype.ProcessCheck = function() {
-    var me = this;
-    var checkCount = 0;
-    var checkEvent;
-    for (var i = 0; i < me.checks.length; ++i) {
-        checkEvent = me.checks[i];
-        if (typeof checkEvent.select !== 'undefined') {
-            ++checkCount;
-        }
-    }
-    
-    if (checkCount === me.checks.length) {
-        // 客户全部选择完毕,此刻处理
-        if (me.checks.length > 1) {
-            me.checks.sort(RuleSort(me));
-            GameLog("事件检测排序!", me.checks);
-        }
-        
-        checkEvent = me.checks[0];
-        var select = checkEvent.select;
-        var place = checkEvent.place;
-        var selfCheck = typeof checkEvent.selfCheck !== 'undefined'
-        // 清除事件
-        me.checks.splice(0, me.checks.length);
-        // 处理事件
-        me.ProcessEvent(place, select, selfCheck);
-    }
-}
-*/
 
 Room.prototype.ProcessCheck = function() {
 
@@ -1228,7 +1197,7 @@ Room.prototype.RemoveLastOneInPlayerOutputCards = function() {
     player.data.outputCards.pop();
 }
 
-Room.prototype.CalcPlayersScore = function(winnerPlace) {
+Room.prototype.CalcPlayersScore = function(winnerPlace, selfHu) {
     var me = this;
     var player, other, tempScore;
     var hasZhuangXian = this.RuleHasZhuangXian();
@@ -1269,12 +1238,130 @@ Room.prototype.CalcPlayersScore = function(winnerPlace) {
                 player.data.singleScore += tempScore;
             }
         }
+    }
+    
+    if (winner.data.piao) {
+        if (me.CalcBaoCard(winnerPlace, selfHu) === true) {
+            // 包牌将让出牌者代付其他玩家输掉的分数
+            var thrower = me.players[me.lastThrowPlace]; 
+            for (var p = 0; p < me.players.length; ++p) {
+                if (p !== winnerPlace && p !== me.lastThrowPlace) {
+                    player = me.players[p];
+                    thrower.data.singleScore += player.data.singleScore;
+                    player.data.singleScore = 0;
+                }
+            }
+        }
+    }
+    
+    for (var pi = 0; pi < me.players.length; ++pi) {
+        player = me.players[pi];
         player.data.totalScore += player.data.singleScore;
     }
     
     if (winnerPlace !== this.bankerPlace) {
         me.ChangeZhuang();
     }
+}
+
+Room.prototype.CalcBaoCard = function(winnerPlace, selfHu) {
+    var me = this;
+    var bao = false;
+    var winner = me.players[winnerPlace];
+    // 包牌规则
+    if (winner.data.piao && selfHu === false) {
+        var thrower = me.players[me.lastThrowPlace]; 
+        var card;
+        var outputCardMap = new Array(50);
+        Util.ArrayZero(outputCardMap);
+        
+        if (winner.data.cards.length === 1) {
+            // 单张飘牌包五张
+            var card = winner.data.piaoCard;
+            var base = Math.floor(card / 10);
+            var mod = card % 10;
+            for (var m = mod - 2; m <= mod + 2; ++m) {
+                if (m >= 1 && m <= 9) {
+                    if (me.lastThrowCard === (base + m)) {
+                        bao = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (bao === true) return true;
+        
+        for (var i = 0; i < me.players.length; ++i) {
+            player = me.players[i];
+            // 检测已经碰的牌,如果手上有已经碰过的牌而不打,就算包
+            if (player.data.pengCards.length > 0) {
+                for (var j = 0; j < player.data.pengCards.length; j+=3) {
+                    card = player.data.pengCards[j];
+                    if (thrower.HasCard(card) === true) {
+                        bao = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (me.RuleCanJiang() && winner.data.cards.length === 4) {
+                // 如果可以将牌,检测已经将过的牌,如果手上有已经将过的牌而不打,就算包(只针对飘2对的)
+                if (player.data.jiangCards.length > 0) {
+                    for (var ji = 0; ji < player.data.jiangCards.length; ji+=2) {
+                        card = player.data.jiangCards[ji];
+                        if (thrower.HasCard(card) === true){
+                            bao = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // 统计已打出的牌.
+            if (player.data.outputCards.length > 0) {
+                for (var j = 0; j < player.data.outputCards.length; ++j) {
+                    ++outputCardMap[player.data.outputCards[j]];
+                }
+            }
+        }
+        
+        if (bao === true) return true;
+
+        for (var j = 0; j < outputCardMap.length; ++j) {
+             // 检测已经打出去的牌,如果手上有已经打出三张的牌而不打,就算包
+            if (outputCardMap[j] === 3) {
+                if (thrower.HasCard(j)) {
+                    bao = true;
+                    break;
+                }
+            }
+            
+            if (j === me.lastThrowCard) {
+                // 如果玩家打了一张没有出现过的牌,就算包.
+                if (outputCardMap[j] === 1) {
+                    for (var jc = 0; jc < thrower.data.cards.length; ++jc) {
+                        if (outputCardMap[thrower.data.cards[jc]] >= 1) {
+                            bao = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (winner.data.cards.length === 4) {
+                // 检测已经打出去的牌,如果手上有已经打出两张的牌而不打,就算包(只针对飘2对的)
+                if (outputCardMap[j] === 2) {
+                    if (thrower.HasCard(j)) {
+                        bao = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    return bao;
 }
 
 Room.prototype.GameEnd = function() {

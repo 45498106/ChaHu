@@ -108,6 +108,14 @@ Player.prototype.CanPiao = function() {
     return false;
 }
 
+Player.prototype.HasCard = function(card) {
+    for (var i = 0; i < this.data.cards.length; ++i) {
+        if (this.data.cards[i] === card)
+            return true;
+    }
+    return false;
+}
+
 Player.prototype.AddCard = function(card){
     this.CalcHuCard(card);
     
