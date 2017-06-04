@@ -14,6 +14,9 @@ cc.Class({
         historyBtn : cc.Button,
         settingBtn : cc.Button,
         
+        notifyLayer :cc.Node,
+        moneyLayer : cc.Node,
+        
         
         nameLable : cc.Label,
         idLabel : cc.Label,
@@ -35,9 +38,14 @@ cc.Class({
         
         SetSpriteImage(this.headSprite, {url: GameData.userHeadUrl, type:'jpg'});
         
+        
+        // 获得buttons
+        GameSocket().Send("homeButtons", window.GameVersion);
+        
         // 获得房间数据
         GameSocket().Send("getRoomRecord");
         // 注册事件
+        GameEvent().OnEvent("HomeButtonsBack", this.OnHomeButtons, this);
         GameEvent().OnEvent("GetRoomRecordSuccess", this.OnGetRoomRecordSucces, this);
         GameEvent().OnEvent("CreateRoomSuccess", this.OnCreateRoomSuccess, this);
         GameEvent().OnEvent("JoinRoomSuccess", this.OnJoinRoomSucces, this);
@@ -79,6 +87,44 @@ cc.Class({
     
     OnAddGold : function() {
         Notify().Play("加班实现中，敬请期待");
+    },
+    
+    OnHomeButtons : function() {
+        if (GameData.homeButtons.indexOf('share') < 0) {
+            this.shareBtn.node.active = false;
+        }else {
+            this.shareBtn.node.active = true;
+        }
+        
+        if (GameData.homeButtons.indexOf('rule') < 0) {
+            this.ruleBtn.node.active = false;
+        }else {
+            this.ruleBtn.node.active = true;
+        }
+        
+        if (GameData.homeButtons.indexOf('record') < 0) {
+            this.historyBtn.node.active = false;
+        }else {
+            this.historyBtn.node.active = true;
+        }
+        
+        if (GameData.homeButtons.indexOf('setting') < 0) {
+            this.settingBtn.node.active = false;
+        }else {
+            this.settingBtn.node.active = true;
+        }
+        
+        if (GameData.homeButtons.indexOf('money') < 0) {
+            this.moneyLayer.active = false;
+        }else {
+            this.moneyLayer.active = true;
+        }
+        
+        if (GameData.homeButtons.indexOf('notify') < 0) {
+            this.notifyLayer.active = false;
+        }else {
+            this.notifyLayer.active = true;
+        }
     },
     
     OnGetRoomRecordSucces : function() 

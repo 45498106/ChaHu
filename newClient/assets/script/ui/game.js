@@ -91,6 +91,9 @@ cc.Class({
         preRoomIdLabel : cc.Label,
         
         exitRoomBtn : cc.Button,
+        settingBtn : cc.Button,
+        shortWordBtn : cc.Button,
+        voiceBtn : cc.Button,
         inviteBtn : cc.Button,
         readyBtn : cc.Button,
         countiuBtn : cc.Button,
@@ -186,6 +189,9 @@ cc.Class({
         this.preparePnl.active = false;
         
         this.exitRoomBtn.node.on('click', this.OnExitRoom, this);
+        this.settingBtn.node.on('click', this.OnSetting, this);
+        this.shortWordBtn.node.on('click', this.OnShortWord, this);
+        this.voiceBtn.node.on('click', this.OnVoice, this);
         this.inviteBtn.node.on('click', this.OnInvitePlayer, this);
         this.readyBtn.node.on('click', this.OnReady, this);
         this.countiuBtn.node.on('click', this.OnContinue, this);
@@ -721,7 +727,19 @@ cc.Class({
     },
     
     OnInvitePlayer : function() {
-        GameLog("OnInvitePlayer");
+        Notify().Play("加班实现中，敬请期待");
+    },
+    
+    OnVoice : function() {
+        Notify().Play("加班实现中，敬请期待");
+    },
+    
+    OnSetting : function() {
+        Notify().Play("加班实现中，敬请期待");
+    },
+    
+    OnShortWord : function() {
+        Notify().Play("加班实现中，敬请期待");
     },
     
     OnReady : function() {
@@ -780,8 +798,17 @@ cc.Class({
         }else if (IsOppositePlayer(place)){
             this.OppositeAddCard(card)
         }else {
-            var cards = GameData.players[place].cards;
+            var player = GameData.players[place];
+            var cards = player.cards;
             this.SelfAddCard(card, cards.length - 1);
+            
+            if (player.piao === true && typeof data.hu === 'undefined') {
+                setTimeout(function(card){
+                    return function() {
+                        GameSocket().Send('needThrowCard',  { "card" : card } );
+                    }
+                }(card), 1000);
+            }
         }
         
         this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 

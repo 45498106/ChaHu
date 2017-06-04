@@ -9,6 +9,16 @@ loginMenuBack['Process'] = function(message) {
 };
 MessageHandler.Add(loginMenuBack);
 
+var homeButtonsBack = {};
+homeButtonsBack['interest']="homeButtonsBack";
+homeButtonsBack['Process'] = function(message) {
+    GameLog(message);
+    GameData.homeButtons = message.slice();
+    GameEvent().SendEvent("HomeButtonsBack");
+}
+
+MessageHandler.Add(homeButtonsBack);
+
 
 var enterGameBack = {};
 enterGameBack['interest'] = "enterGameBack";
@@ -24,3 +34,4 @@ enterGameBack['Process'] = function (message) {
     GameEvent().SendEvent("LoginSuccess");
 };
 MessageHandler.Add(enterGameBack);
+

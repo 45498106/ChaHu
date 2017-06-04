@@ -2,6 +2,7 @@
 
     var GameData = {
         loginMenu : [],
+        homeButtons : [],
         
         
     	userId : -1,

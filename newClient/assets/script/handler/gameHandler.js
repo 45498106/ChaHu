@@ -6,7 +6,7 @@ var MessageHandler = require("msgHandler");
 var getRoomRecordBack = {};
 getRoomRecordBack['interest'] = "getRoomRecordBack";
 getRoomRecordBack['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     GameData.userRoomCard = data.roomCard;
     GameData.userRoomData = JSON.parse(data.roomData);
@@ -20,7 +20,7 @@ MessageHandler.Add(getRoomRecordBack);
 var createRoomBack = {};
 createRoomBack['interest'] = "createRoomBack";
 createRoomBack['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     GameData.userRoomData = JSON.parse(data);
     // 进入游戏
@@ -54,7 +54,7 @@ MessageHandler.Add(exitRoomBack);
 var joinRoomBack = {};
 joinRoomBack['interest'] = "joinRoomBack";
 joinRoomBack['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
     
     GameData.userRoomData = JSON.parse(data);
     // 进入游戏
@@ -66,7 +66,7 @@ MessageHandler.Add(joinRoomBack);
 var newPlayer = {};
 newPlayer['interest'] = "newPlayer";
 newPlayer['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
     
     var userPlace = data.place;
     var userId = data.id;
@@ -90,7 +90,7 @@ MessageHandler.Add(newPlayer);
 var losePlayer = {};
 losePlayer['interest'] = "losePlayer";
 losePlayer['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
     
     var place = data.place;
     GameData.players[place] = null;
@@ -103,7 +103,7 @@ MessageHandler.Add(losePlayer);
 var playerOffline = {};
 playerOffline['interest'] = "playerOffline";
 playerOffline['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
     
     var place = data;
     GameData.players[place].offline = true;
@@ -116,7 +116,7 @@ MessageHandler.Add(playerOffline);
 var playerList = {};
 playerList['interest'] = "playerList";
 playerList['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
     var newPlayer;
     var userPlace ,userId, userName, userHeadUrl;
     for (var i = 0; i < data.length; ++i) {
@@ -151,7 +151,7 @@ MessageHandler.Add(playerReady);
 var readyOk = {};
 readyOk['interest'] = "readyOk";
 readyOk['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
     var place = data;
     if (GameData.players[place]) {
         GameData.players[place].ready = true;
@@ -166,7 +166,7 @@ MessageHandler.Add(readyOk);
 var newGame = {};
 newGame['interest'] = "newGame";
 newGame['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
     
     GameData.userRoomData.bankerPlace = data.bankerPlace;
     GameData.userRoomData.playCount = data.playCount;
@@ -191,7 +191,7 @@ MessageHandler.Add(newGame);
 var initCards = {};
 initCards['interest'] = "initCards";
 initCards['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     var place = data.place;
     var palyer = GameData.players[place];
@@ -208,7 +208,7 @@ MessageHandler.Add(initCards);
 var getCard = {};
 getCard['interest'] = "getCard";
 getCard['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     var place = data.place;
     var card = data.card;
@@ -229,7 +229,7 @@ MessageHandler.Add(getCard);
 var throwCard = {};
 throwCard['interest'] = "throwCard";
 throwCard['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     var place = data.place;
     var card = data.card;
@@ -256,7 +256,7 @@ MessageHandler.Add(throwCard);
 var pengCards = {};
 pengCards['interest'] = "pengCards";
 pengCards['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     var place = data.place;
     var card = data.card;
@@ -301,7 +301,7 @@ MessageHandler.Add(gangCards);
 var kanCards = {};
 kanCards['interest'] = "kanCards";
 kanCards['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     var place = data.place;
     var card = data.card;
@@ -323,7 +323,7 @@ MessageHandler.Add(kanCards);
 var niuCards = {};
 niuCards['interest'] = "niuCards";
 niuCards['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     var place = data.place;
     var card = data.card;
@@ -345,7 +345,7 @@ MessageHandler.Add(niuCards);
 var jiangCards = {};
 jiangCards['interest'] = "jiangCards";
 jiangCards['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     var place = data.place;
     var card = data.card;
@@ -368,8 +368,10 @@ MessageHandler.Add(jiangCards);
 var piaoCards = {};
 piaoCards['interest'] = "piaoCards";
 piaoCards['Process'] = function (data) {
-    GameLog(data);
-    //var place = data;
+    //GameLog(data);
+    var place = data.place;
+    var player = GameData.players[place];
+    player.piao = true;
     // 通知
     GameEvent().SendEvent('PiaoCards', data);
 };
@@ -381,7 +383,7 @@ var huCards = {};
 huCards['interest'] = "huCards";
 huCards['Process'] = function (data) {
     // 玩家胡牌
-    GameLog(data);
+    //GameLog(data);
 
     var place = data.place;
     var card = data.card;
@@ -427,7 +429,7 @@ MessageHandler.Add(huCards);
 var addNiuCard = {};
 addNiuCard['interest'] = "addNiuCard";
 addNiuCard['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
     var place = data.place;
     
     var addNiuCard = data.addNiuCard;
@@ -447,8 +449,7 @@ MessageHandler.Add(addNiuCard);
 var resumeGame = {};
 resumeGame['interest'] = "resumeGame";
 resumeGame['Process'] = function (data) {
-    
-    
+
     function SimpleClone(src) {
         var dst = {}
         for (var key in src) {
@@ -457,7 +458,7 @@ resumeGame['Process'] = function (data) {
         return dst;
     }
     
-    GameLog(data);
+    //GameLog(data);
     
     var roomInfo = data.roomInfo;
     var playerList = data.playerList;
@@ -531,7 +532,7 @@ MessageHandler.Add(resumeGame);
 var playerReconnection = {};
 playerReconnection['interest'] = "playerReconnection";
 playerReconnection['Process'] = function (data) {
-    GameLog(data);
+    //GameLog(data);
 
     var place = data;
     delete GameData.players[place].offline;
@@ -545,7 +546,7 @@ MessageHandler.Add(playerReconnection);
 var accounts = {};
 accounts['interest'] = "accounts";
 accounts['Process'] = function (datas) {
-    GameLog(datas);
+    //GameLog(datas);
 
     var place, data;
     for (var i = 0; i < datas.playData.length; ++i) {

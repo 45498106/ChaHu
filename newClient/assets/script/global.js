@@ -2,7 +2,7 @@ window.GameHost = "192.168.1.222";
 window.GamePort = 18080;
 window.LogHost = "chahu.h5ii.com";
 window.LogPort = 38086;
-
+window.GameVersion = "1.0";
 
 /*
 if (!cc.sys.isNative) {

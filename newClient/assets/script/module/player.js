@@ -17,6 +17,7 @@ function Player(){
     this.score = 0;
     this.singleScore = 0;
     this.totalScore = 0;
+    this.piao = false;
 }
 
 Player.prototype.Clear = function() {
@@ -30,6 +31,7 @@ Player.prototype.Clear = function() {
     
     this.score = 0;
     this.singleScore = 0;
+    this.piao = false;
 }
 
 Player.prototype.Init = function(id, place, name, headUrl) {

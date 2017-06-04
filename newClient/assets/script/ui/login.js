@@ -40,7 +40,7 @@ cc.Class({
     
     OnConnectedServer : function() {
         if (GameSocket().IsConnected()) {
-            GameSocket().Send("loginMenu");   
+            GameSocket().Send("loginMenu", window.GameVersion);   
         }
     },
     

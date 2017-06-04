@@ -191,6 +191,9 @@ cc.Class({
             player = GameData.players[i];
             head = this.heads[i];
             
+            var headIcon = head.getChildByName('headIcon').getComponent(cc.Sprite);
+            SetSpriteImage(headIcon, player.headUrl);
+            
             if (GameData.userRoomData.bankerPlace === i) {
                 head.getChildByName("zhuang").active = true;
             }
