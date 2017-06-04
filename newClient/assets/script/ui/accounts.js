@@ -121,7 +121,11 @@ cc.Class({
                 children = inst.children;
                 for (c = 0; c < children.length; c++) {
                     spr = children[c].getComponent(cc.Sprite);
-                    spr.spriteFrame = CardSpriteFrameCache[3][kanCards[k]];
+                    if (c === 1) {
+                        spr.spriteFrame = CardSpriteFrameCache[3][kanCards[k]];
+                    }else {
+                        spr.spriteFrame = CardSpriteFrameCache[3][10];
+                    }
                 }
             
                 this.cards[i].addChild(inst);
@@ -159,7 +163,7 @@ cc.Class({
                 spr.spriteFrame = CardSpriteFrameCache[4][cards[j]];
                 if (GameData.huPlace === i && j === (cards.length - 1))
                 {
-                    if ((cards.length % 2) === 0) {
+                    if (((cards.length - 1) % 3) !== 0) {
                         this.cards[i].addChild(cc.instantiate(this.gapPrefab));
                         this.cards[i].addChild(inst);
                     }
@@ -171,7 +175,8 @@ cc.Class({
                         spr.spriteFrame = CardSpriteFrameCache[4][GameData.huCard];
                         this.cards[i].addChild(inst);
                     }
-                }else {
+                }
+                else {
                     this.cards[i].addChild(inst);
                 }
             }

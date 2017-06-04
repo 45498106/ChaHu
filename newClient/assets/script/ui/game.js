@@ -161,6 +161,11 @@ cc.Class({
         dongLeft : cc.Sprite,
         dongRight : cc.Sprite,
         
+        piaoDown : cc.Sprite,
+        piaoUp : cc.Sprite,
+        piaoLeft : cc.Sprite,
+        piaoRight : cc.Sprite,
+        
         timeLabel : cc.Label,
         secondLabel : cc.Label,
         
@@ -172,6 +177,7 @@ cc.Class({
         animPiao : cc.Node,
         piaoArrow : cc.Node,
         
+        tingCardsNotify : cc.Node,
     },
 
     // use this for initialization
@@ -325,6 +331,9 @@ cc.Class({
             var now = new Date();
             var nowHours = now.getHours();
             var nowMintues = now.getMinutes();
+            if (nowMintues < 10) {
+                nowMintues = "0" + nowMintues;
+            }
             this.timeLabel.string = nowHours + ":" + nowMintues;
         }.bind(this));
         
@@ -372,6 +381,29 @@ cc.Class({
         }
     },
     
+    SetPiaoCard : function(place, card) {
+        if (IsFrontPlayer(place)) {
+            this.piaoLeft.node.active = true;
+            this.piaoLeft.spriteFrame = CardSpriteFrameCache[3][card];
+        }else if (IsBackPlayer(place)) {
+            this.piaoRight.node.active = true;
+            this.piaoRight.spriteFrame = CardSpriteFrameCache[3][card];
+        }else if (IsOppositePlayer(place)){
+            this.piaoUp.node.active = true;
+            this.piaoUp.spriteFrame = CardSpriteFrameCache[3][card];
+        }else {
+            this.piaoDown.node.active = true;
+            this.piaoDown.spriteFrame = CardSpriteFrameCache[3][card];
+        }
+    },
+    
+    HiddenPiaoCard : function() {
+        this.piaoLeft.node.active = false;
+        this.piaoRight.node.active = false;
+        this.piaoUp.node.active = false;
+        this.piaoDown.node.active = false;
+    },
+    
     PrepareShow : function() {
         this.playingPnl.active = false;
         this.preparePnl.active = true;
@@ -399,8 +431,10 @@ cc.Class({
         this.InitPlayingHead();
         this.HiddenOperat();
         this.HiddenOperat2();
+        this.HiddenPiaoCard();
+        this.tingCardsNotify.active = false;
         
-        GameData.needFlushCard = false;
+        GameData.addNiuFlushCard = false;
         
         this.SetTitleInfo();
     },
@@ -725,10 +759,12 @@ cc.Class({
         var place = data.place;
         var card = data.card;
         
-        if (GameData.needFlushCard) {
+        if (GameData.addNiuFlushCard) {
             var player = GameData.players[place];
+            var lastCard = player.cards.pop();
             this.InitPlayerCards(place, player);
-            GameData.needFlushCard = false;
+            player.cards.push(lastCard);
+            GameData.addNiuFlushCard = false;
         }
         
         if (typeof GameData.userRoomData.remainNum === 'number') {
@@ -762,12 +798,14 @@ cc.Class({
         
         var data = event.detail;
         var place = data.place;
-        var card = data.card;
+        var card = data.addNiuCard;
         
-        if (GameData.needFlushCard) {
+        if (GameData.addNiuFlushCard) {
             var player = GameData.players[place];
+            var lastNiuCard = player.niuCards.pop();
             this.InitPlayerCards(place, player);
-            GameData.needFlushCard = false;
+            player.niuCards.push(lastNiuCard); 
+            GameData.addNiuFlushCard = false;
         }
 
         if (IsFrontPlayer(place)) {
@@ -785,7 +823,7 @@ cc.Class({
         var audioMng = AudioMng();
         if (audioMng) audioMng.playAddNiu();
         
-        GameData.needFlushCard = true;
+        GameData.addNiuFlushCard = true;
     },
     
     OnThrowCard : function(event) {
@@ -816,6 +854,33 @@ cc.Class({
                         typeof data.zha !== 'undefined');
                         
         this.ShowOperat2(typeof data.xi !== 'undefined', typeof data.piao !== 'undefined');
+        
+        
+        // 听牌提示 
+        if (GameData.huCards.length > 0) {
+            this.tingCardsNotify.active = true;
+            if (typeof this.tingCardsNotify.huCardStr !== undefined) {
+                if (this.tingCardsNotify.huCardStr !== GameData.huCards.toString()) {
+                    var layout = this.tingCardsNotify.getChildByName('cards');
+                    var children = layout.children;
+                    var spr;
+                    for (var i = 0; i < 3; ++i) {
+                        if (i < GameData.huCards.length) {
+                            children[i].active = true;
+                            spr = children[i].getComponent(cc.Sprite);
+                            spr.spriteFrame = CardSpriteFrameCache[3][GameData.huCards[i]];
+                        }else {
+                            children[i].active = false;
+                        }
+                    }
+                    
+                    this.tingCardsNotify.huCardStr = GameData.huCards.toString();
+                }
+            } 
+            
+        }else {
+            this.tingCardsNotify.active = false;
+        }
     
         // 播放声音
         var audioMng = AudioMng();
@@ -940,8 +1005,13 @@ cc.Class({
     },
     
     OnPiaoCards : function(event) {
-        var place = event.detail;
+        var data = event.detail;
+        var place = data.place;
+        var card = data.card;
         this.PlayPiaoAnim(place);
+        
+        this.DelLastThrowCardByPlace(place);
+        this.SetPiaoCard(place, card);
 
         // 播放声音
         var audioMng = AudioMng();
@@ -1022,6 +1092,7 @@ cc.Class({
     },
     
     OnOpGuo2 : function() {
+        GameSocket().Send('passCards');
         this.HiddenOperat2();
     },
     

@@ -15,6 +15,7 @@
         getCardPlace : -1,
         huPlace : -1,
         huCard : 0,
+        huCards : [],
         needFlushCard : false,
         resumeGame : false,
         selfOperation : null,

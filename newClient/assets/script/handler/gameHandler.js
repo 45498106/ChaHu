@@ -180,6 +180,7 @@ newGame['Process'] = function (data) {
     
     GameData.huPlace = -1;
     GameData.huCard = 0;
+    GameData.huCards = new Array();
     
     GameEvent().SendEvent('NewGame');
 };
@@ -239,6 +240,10 @@ throwCard['Process'] = function (data) {
         player.cards.sort();
     }else {
         player.cards.pop();
+    }
+    
+    if (typeof data.huCards !== 'undefined') {
+        GameData.huCards = data.huCards.slice();
     }
     
     // 通知
@@ -384,7 +389,7 @@ huCards['Process'] = function (data) {
     var player = GameData.players[place];
         
     player.cards = data.cards.slice();
-    player.cards.sort();
+    //player.cards.sort();
 
     if (typeof data.pengCards !== 'undefined') {
         player.pengCards = data.pengCards.slice();
@@ -424,7 +429,6 @@ addNiuCard['interest'] = "addNiuCard";
 addNiuCard['Process'] = function (data) {
     GameLog(data);
     var place = data.place;
-    var card = data.card;
     
     var addNiuCard = data.addNiuCard;
     var player = GameData.players[place];
