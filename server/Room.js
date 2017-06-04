@@ -480,6 +480,7 @@ Room.prototype.RemovePlayer = function(player, noBroadcast)
 
         this.players[place] = null;
         player.room = null;
+        player.ready = false;
         if (me.started) {
             me.playData[place].offline = true;
             me.pause = true;
@@ -694,8 +695,8 @@ Room.prototype.NewGame = function()
         this.costMoney = 1;
     }
     
-    //this.RandomCards();
-    this.FixCards();
+    this.RandomCards();
+    //this.FixCards();
     
     // 测试
     /*for (var p = 0; p < 4; ++p) {

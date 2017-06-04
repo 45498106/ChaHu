@@ -37,6 +37,7 @@ function GameServer()
     this.rooms = {};
     this._pdte = new Date().getTime();
     this._playerCache = {}; // 缓存玩家重复登录
+    this._robots = {};
 }
 
 GameServer.prototype.Init = function()
@@ -67,8 +68,14 @@ GameServer.prototype.NewClient = function(client)
     var socket = client.socket;
     var server = this;
     
-    PROCESS_COCOS_SOCKETIO(socket, 'loginMenu', function (data) {
-        socket.emit('loginMenuBack', Config.loginMenu);
+    PROCESS_COCOS_SOCKETIO(socket, 'loginMenu', function (version) {
+        var ver = typeof version === 'undefined' ? "1.0" : version;
+        socket.emit('loginMenuBack', Config.GetBranch(ver).loginMenu);
+    });
+    
+    PROCESS_COCOS_SOCKETIO(socket, 'homeButtons', function (version) {
+        var ver = typeof version === 'undefined' ? "1.0" : version;
+        socket.emit('homeButtonsBack', Config.GetBranch(ver).homeButtons);
     });
     
     PROCESS_COCOS_SOCKETIO(socket, 'enterGame', function (data) {
@@ -83,8 +90,14 @@ GameServer.prototype.NewClient = function(client)
         var name = data.name;
         var headUrl = data.headUrl;
         
+        if (typeof uniqueID !== 'string' || uniqueID.length > 63) {
+            GameLog("非法uniqueID.");
+            return;
+        }
+        
         if (typeof server._playerCache[uniqueID] !== 'undefined') {
             GameLog("账号多次登录.");
+            socket.emit("gameError", { msg : "账号已登录!"});
             return;
         }
         
@@ -106,6 +119,10 @@ GameServer.prototype.NewClient = function(client)
                     userHeadHurl = headUrl;
                     UserDB.UpdateUserInfo(uniqueID, userName, userHeadHurl);
                 }
+                else if (loginType === 'robot') {
+                    data.name = userName;
+                    data.headUrl = userHeadHurl;
+                }
                 
                 // TODO:测试用的. 正式版不用
                 GameDB.GetUserData(userId, function(result, dbData){
@@ -122,6 +139,12 @@ GameServer.prototype.NewClient = function(client)
                 client.player = newPlayer;
                 // 缓存玩家重复登录
                 server._playerCache[uniqueID] = newPlayer;
+                
+                if (loginType === 'robot') {
+                    GameLog("添加机器人:"+ userName);
+                    server._robots[uniqueID] = newPlayer;
+                    newPlayer.socket.join("robotChannel"); // 加入机器人频道
+                }
             }
             else {
                 UserDB.RegisterByUniqueID(uniqueID, loginType, function(success, insertId) {
@@ -130,16 +153,20 @@ GameServer.prototype.NewClient = function(client)
                     var defaultHeadUrl = "https://wx.qlogo.cn/mmhead/Q3auHgzwzM5G2pXRJFPt9gt7gXw4VUgCV8FfibSiaN6z0Mic6sp80f7jg/0";
                     var userHeadHurl = "";
                     if (loginType === 'guest') {
-                        userName = "游客"+userId;
+                        //userName = "游客"+userId;
+                        userName = ""+userId;
                         userHeadHurl = defaultHeadUrl;
                     }else if (loginType === 'weixin') {
                         userName = name;
                         userHeadHurl = headUrl;
+                    }else if (loginType === 'robot') {
+                        userName = name;
+                        userHeadHurl = defaultHeadUrl;
                     }
                     
                     // 响应请求
                     var data = { userId : userId, loginType : loginType };
-                    if (loginType === 'guest') {
+                    if (loginType === 'guest' || loginType === 'robot') {
                         data.name = userName;
                         data.headUrl = userHeadHurl;
                     }
@@ -156,6 +183,12 @@ GameServer.prototype.NewClient = function(client)
                     
                     // 缓存玩家重复登录
                     server._playerCache[uniqueID] = newPlayer;
+                    
+                    if (loginType === 'robot') {
+                        GameLog("添加机器人:"+ userName);
+                        server._robots[uniqueID] = newPlayer;
+                        newPlayer.socket.join("robotChannel"); // 加入机器人频道
+                    }
                 });
             }
         });
@@ -171,6 +204,7 @@ GameServer.prototype.NewClient = function(client)
         var ruleId = data.ruleId & 0x7;
         var quanId = data.quanId;
         var hunCount = data.hunCount;
+        var version = data.version;
         
         GameDB.GetUserData(userId, function(result, dbData){
             if (result === false) {
@@ -220,6 +254,12 @@ GameServer.prototype.NewClient = function(client)
             var rs =  server.CreateRoom(client.player, ruleId, quanId, hunCount);
             if (rs) {
                 GameDB.UpdateRoomData(userId, Room.prototype.DBSaveRoomInfo(client.player.room));
+                
+                
+                var ver = typeof version === 'undefined' ? "1.0" : version;
+                if (Config.GetBranch(ver).createRoomAutoInviteRobot === true) {
+                    server.InviteRobot(client.player.room.id);
+                }
             }
         });
     });
@@ -266,6 +306,12 @@ GameServer.prototype.DeleteClient = function(client)
         
         // 缓存玩家重复登录
         delete this._playerCache[player.uniqueID];
+        
+        if (typeof this._robots[player.uniqueID] !== 'undefined') {
+            player.socket.leave("robotChannel"); // 离开机器人频道
+            GameLog("删除机器人:"+player.name);
+            delete this._robots[player.uniqueID];
+        }
         
         if (player.room) {
             player.room.RemovePlayer(player);
@@ -365,6 +411,11 @@ GameServer.prototype.JoinRoom = function(player, roomId)
                 GameLog("并非原房间开局时的玩家参与!");
             }
             
+            if (typeof this._robots[player.uniqueID] !== 'undefined') {
+                // 机器人不写数据库
+                return;
+            }
+            
             GameDB.GetUserData(userId, function(result, dbData){
                 if (result === false) {
                     return;
@@ -388,7 +439,19 @@ GameServer.prototype.JoinRoom = function(player, roomId)
         player.room = room;
         room.AddPlayer(player);
         
+        
+        if (typeof this._robots[player.uniqueID] !== 'undefined') {
+            // 机器人不写数据库
+            return;
+        }
+        
         // 写入记录到数据库
         GameDB.UpdateRoomData(userId, Room.prototype.DBSaveRoomInfo(room));
     }
 }
+
+// 邀请机器人
+GameServer.prototype.InviteRobot = function(roomId) {
+    IO.to("robotChannel").emit('inviteJionRoom', { roomId : roomId} );
+}
+

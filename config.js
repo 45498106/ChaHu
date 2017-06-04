@@ -18,7 +18,27 @@ var Config = {
     db_user : 'bdm25324667',
     db_password : '0217104lsh',
     
-    loginMenu : ['weixin', 'guest'],
+    branchA : { // aplha审核分支
+        loginMenu : ['guest'],
+        homeButtons : ['rule'],
+        createRoomAutoInviteRobot : true,   // 创建房间自动邀请机器人
+    },
+    
+    branchB : { // beta正式分支
+        loginMenu : ['weixin', 'guest'],
+        homeButtons : ['share', 'rule', 'record', 'setting', 'money', 'notify'],
+        createRoomAutoInviteRobot : false,
+    },
+    
+    GetBranch : function(varsion) {
+        var branchB_mapArray = [];
+        var inBranchB = (branchB_mapArray.indexOf(varsion) >= 0);
+        if (inBranchB) {
+            return this.branchB;
+        }
+        
+        return this.branchA;
+    }
 }
 
 if(typeof module !== 'undefined')
