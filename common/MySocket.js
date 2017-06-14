@@ -34,14 +34,14 @@ SocketProxy.prototype.Init = function() {
                         
                         if (typeof message === 'string') {
                             if (message === '{"event":"heartbeat"}') {
-                                
+                            
                             }
                             else {
                                 console.log(message, typeof message);
-                                var obj = JSON.parse(message);
-                                if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
-                                    self.interest[obj.event](obj.data);
-                                }
+                            }
+                            var obj = JSON.parse(message);
+                            if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
+                                self.interest[obj.event](obj.data);
                             }
                         }else {
                             console.log(message, typeof message);

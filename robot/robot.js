@@ -48,14 +48,13 @@ SocketProxy.prototype.Init = function() {
                     
                         if (typeof event.data === 'string') {
                             if (event.data === '{"event":"heartbeat"}') {
-                                    
                             }
                             else {
                                 console.log(event.data, typeof event.data);
-                                var obj = JSON.parse(event.data);
-                                if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
-                                    self.interest[obj.event](obj.data);
-                                }
+                            }
+                            var obj = JSON.parse(event.data);
+                            if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
+                                self.interest[obj.event](obj.data);
                             }
                         }else {
                             console.log(event.data, typeof event.data);
