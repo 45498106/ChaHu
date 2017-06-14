@@ -45,7 +45,7 @@ SocketProxy.prototype.Init = function() {
                 }
                 else {
                     try {
-                        if (typeof event === 'stirng') {
+                        if (typeof event === 'string') {
                             if (event === '{"event":"heartbeat"}') {
                                 
                             }

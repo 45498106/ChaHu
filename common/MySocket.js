@@ -32,7 +32,7 @@ SocketProxy.prototype.Init = function() {
                 else {
                     try {
                         
-                        if (typeof message === 'stirng') {
+                        if (typeof message === 'string') {
                             if (message === '{"event":"heartbeat"}') {
                                 
                             }
