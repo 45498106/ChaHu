@@ -45,19 +45,20 @@ SocketProxy.prototype.Init = function() {
                 }
                 else {
                     try {
-                        if (typeof event === 'string') {
-                            if (event === '{"event":"heartbeat"}') {
-                                
+                    
+                        if (typeof event.data === 'string') {
+                            if (event.data === '{"event":"heartbeat"}') {
+                                    
                             }
                             else {
-                                console.log(event, typeof event);
-                                var obj = JSON.parse(event);
+                                console.log(event.data, typeof event.data);
+                                var obj = JSON.parse(event.data);
                                 if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
                                     self.interest[obj.event](obj.data);
                                 }
                             }
                         }else {
-                            console.log(event, typeof event);
+                            console.log(event.data, typeof event.data);
                         }
                     } catch (e) {
                         console.log(e);
