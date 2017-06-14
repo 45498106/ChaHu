@@ -91,7 +91,6 @@ Player.prototype.CanJiangCards = function(card) {
 Player.prototype.CanPiao = function() {
     if (this.data.cards.length === 1){
         return true;
-        
     }
     else if (this.data.cards.length === 4) {
         if (this.data.cards[0] === this.data.cards[1] && 

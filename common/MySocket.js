@@ -6,10 +6,11 @@
 if(typeof module !== 'undefined')
     module.exports = MySocket;
 
-function SocketProxy(mng, ws) {
+function SocketProxy(mng, ws, ip) {
     this.interest = {};
     this.mng = mng;
     this.ws = ws;
+    this.ip = ip;
 }
 
 SocketProxy.prototype.Init = function() {
@@ -30,10 +31,20 @@ SocketProxy.prototype.Init = function() {
                 }
                 else {
                     try {
-                        console.log(message, typeof message);
-                        var obj = JSON.parse(message);
-                        if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
-                            self.interest[obj.event](obj.data);
+                        
+                        if (typeof message === 'stirng') {
+                            if (message === '{"event":"heartbeat"}') {
+                                
+                            }
+                            else {
+                                console.log(message, typeof message);
+                                var obj = JSON.parse(message);
+                                if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
+                                    self.interest[obj.event](obj.data);
+                                }
+                            }
+                        }else {
+                            console.log(message, typeof message);
                         }
                     } catch (e) {
                         console.log(e);
@@ -99,7 +110,7 @@ MySocket.prototype.Init = function(websocketSrv, expressWs) {
     
     wss.ws('/', function(newSocket, req) {
         if (typeof self.interest['connection'] === 'function') {
-            var proxy = new SocketProxy(self, newSocket);
+            var proxy = new SocketProxy(self, newSocket, req.connection.remoteAddress);
             proxy.Init();
             self.interest['connection'](proxy);
         }

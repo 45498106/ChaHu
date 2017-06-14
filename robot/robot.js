@@ -45,17 +45,25 @@ SocketProxy.prototype.Init = function() {
                 }
                 else {
                     try {
-                        console.log(event.data);
-                        var obj = JSON.parse(event.data);
-                        if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
-                            self.interest[obj.event](obj.data);
+                        if (typeof event === 'stirng') {
+                            if (event === '{"event":"heartbeat"}') {
+                                
+                            }
+                            else {
+                                console.log(event, typeof event);
+                                var obj = JSON.parse(event);
+                                if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
+                                    self.interest[obj.event](obj.data);
+                                }
+                            }
+                        }else {
+                            console.log(event, typeof event);
                         }
                     } catch (e) {
                         console.log(e);
                     }
                 }
             }
-            
         }
     }(this);
 }
