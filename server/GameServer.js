@@ -68,13 +68,13 @@ GameServer.prototype.NewClient = function(client)
     var socket = client.socket;
     var server = this;
     
-    PROCESS_COCOS_SOCKETIO(socket, 'loginMenu', function (version) {
-        var ver = typeof version === 'undefined' ? "1.0" : version;
+    PROCESS_COCOS_SOCKETIO(socket, 'loginMenu', function (data) {
+        var ver = (typeof data === 'undefined' || typeof data.version === 'undefined') ? "1.0" : data.version;
         socket.emit('loginMenuBack', Config.GetBranch(ver).loginMenu);
     });
     
-    PROCESS_COCOS_SOCKETIO(socket, 'homeButtons', function (version) {
-        var ver = typeof version === 'undefined' ? "1.0" : version;
+    PROCESS_COCOS_SOCKETIO(socket, 'homeButtons', function (data) {
+        var ver = (typeof data === 'undefined' || typeof data.version === 'undefined') ? "1.0" : data.version;
         socket.emit('homeButtonsBack', Config.GetBranch(ver).homeButtons);
     });
     

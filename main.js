@@ -45,7 +45,7 @@ IO = new (require('./common/MySocket.js'));
 IO.Init(app, expressWs);
 
 IO.on('connection', function (socket) {
-    GameLog('Client [' + socket.ws._ultron.id + '(' + socket.ip + ')] connected!');
+    GameLog('Client [ ' + socket.ws._ultron.id + ' (' + socket.ip + ')] connected!');
     
     // 创建一个客户链接信息.
     var client = { 
@@ -70,7 +70,7 @@ IO.on('connection', function (socket) {
     
     // 断开链接
     socket.on('disconnect', function () {
-        GameLog('Client [' + client.id + '] disconnected!');
+        GameLog('Client [ ' + client.id + ' (' + client.socket.ip + ')] disconnected!');
 
         // 通知gameServer 删除client
         GameServer.DeleteClient(client);
