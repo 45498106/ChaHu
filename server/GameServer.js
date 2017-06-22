@@ -150,7 +150,7 @@ GameServer.prototype.NewClient = function(client)
                 UserDB.RegisterByUniqueID(uniqueID, loginType, function(success, insertId) {
                     var userId = insertId;
                     var userName = "unknow name";
-                    var defaultHeadUrl = "https://wx.qlogo.cn/mmhead/Q3auHgzwzM5G2pXRJFPt9gt7gXw4VUgCV8FfibSiaN6z0Mic6sp80f7jg/0";
+                    var defaultHeadUrl = "https://wx.qlogo.cn/mmhead/Q3auHgzwzM5G2pXRJFPt9gt7gXw4VUgCV8FfibSiaN6z0Mic6sp80f7jg/96";
                     var userHeadHurl = "";
                     if (loginType === 'guest') {
                         //userName = "游客"+userId;

@@ -109,3 +109,23 @@ function CheckClientHeartbeat()
 }
 
 setInterval(CheckClientHeartbeat, c_HeartbeatCheckMS);
+
+
+// 间隔输出内存使用情况
+var c_IntervalShowMemoryUsage = 24 * 60 * 60 * 1000;
+
+function ShowMemoryUsage() {
+    var usage =  process.memoryUsage();
+    GameLog( "rss:"+(usage.rss / 1048576).toFixed(2)+"mb\t" +
+             "heapTotal:"+(usage.heapTotal / 1048576).toFixed(2)+ "mb\t" +
+             "heapUsed:"+(usage.heapUsed / 1048576).toFixed(2)+"mb");
+}
+
+app.get('/ShowMemoryUsage', function(req, res){
+    ShowMemoryUsage();
+    res.statusCode = 200;
+    res.end();
+});
+
+// 内存使用情况
+setInterval(ShowMemoryUsage, c_IntervalShowMemoryUsage);
