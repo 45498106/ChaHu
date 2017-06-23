@@ -25,7 +25,7 @@ var Config = {
     },
     
     branchB : { // beta正式分支
-        loginMenu : ['weixin', 'guest'],
+        loginMenu : ['weixin'],
         homeButtons : ['share', 'rule', 'record', 'setting', 'money', 'notify'],
         createRoomAutoInviteRobot : false,
     },
