@@ -31,7 +31,7 @@ var Config = {
     },
     
     GetBranch : function(varsion) {
-        var branchB_mapArray = [];
+        var branchB_mapArray = ['1.0','web1.0','webMobile1.0','ios1.0','android1.0'];
         var inBranchB = (branchB_mapArray.indexOf(varsion) >= 0);
         if (inBranchB) {
             return this.branchB;
