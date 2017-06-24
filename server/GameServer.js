@@ -194,6 +194,22 @@ GameServer.prototype.NewClient = function(client)
         });
     });
     
+    PROCESS_COCOS_SOCKETIO(socket, 'reconnect', function (data) {
+        var uniqueID = data.uniqueID;
+        UserDB.GetUserInfo(uniqueID, function(success, results) {
+            var userId = results[0].id;
+            var userName = results[0].name;
+            var userHeadHurl = results[0].headUrl;
+            // 创建新用户
+            var newPlayer = new Player();
+            newPlayer.Init(uniqueID, userId, userName, userHeadHurl, socket);
+            client.player = newPlayer;
+            // 缓存玩家重复登录
+            server._playerCache[uniqueID] = newPlayer;
+            socket.emit('reconnectBack');
+        });
+    });
+    
     PROCESS_COCOS_SOCKETIO(socket, 'createRoom', function (data) {
         // 创建房间
         if (typeof client.player === 'undefined') {

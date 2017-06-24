@@ -30,7 +30,19 @@ var Config = {
         createRoomAutoInviteRobot : false,
     },
     
+    branchC : { // 新功能试验版分支
+        loginMenu : ['guest', 'weixin'],
+        homeButtons : ['share', 'rule', 'record', 'setting', 'money', 'notify'],
+        createRoomAutoInviteRobot : true,
+    },
+    
     GetBranch : function(varsion) {
+        var branchC_mapArray = ['web1.1', 'webMobile1.1'];
+        var inBranchC = (branchC_mapArray.indexOf(varsion) >= 0);
+        if (inBranchC) {
+            return this.branchC;
+        }
+        
         var branchB_mapArray = ['1.0','web1.0','webMobile1.0','ios1.0','android1.0'];
         var inBranchB = (branchB_mapArray.indexOf(varsion) >= 0);
         if (inBranchB) {
