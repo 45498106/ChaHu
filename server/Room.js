@@ -259,10 +259,14 @@ Room.prototype.AddPlayer = function(player)
         me.CheckAllReady();
     });
     
-    
     PROCESS_COCOS_SOCKETIO(player.socket, 'unready', function (data) {
         if (me.playing === true) { GameLog("不合法的消息请求"); return; }
         player.ready = false;
+    });
+    
+    PROCESS_COCOS_SOCKETIO(player.socket, 'voice', function (data) {
+        GameLog('voice');
+        me.BroadcastPlayers(null, "voiceBack", data);
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'needThrowCard', function(data) {
@@ -517,6 +521,8 @@ Room.prototype.BroadcastPlayers = function(who, action, argument)
     }else if(action === 'exitRoomBack') {
         IO.to(this.roomName).emit(action, argument);
     }else if (action === 'readyOk') {
+        IO.to(this.roomName).emit(action, argument);
+    }else if (action === 'voiceBack') {
         IO.to(this.roomName).emit(action, argument);
     }else if (action === 'playerReconnection') {
         IO.to(this.roomName).emit(action, argument);
