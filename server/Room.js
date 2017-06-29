@@ -93,6 +93,10 @@ Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playC
     this.bankerCount = bankerCount;   // 庄记数
 }
 
+Room.prototype.Shutdown = function() {
+
+}
+
 Room.prototype.RuleHasZhuangXian = function() {
     if ((this.ruleId & 1) === 1) {
         return true;
@@ -194,12 +198,15 @@ Room.prototype.CheckAllReady = function(id) {
     }
 }
 
+
+// 通知玩家准备游戏
 Room.prototype.SendPlayerReady = function(){
     if (this.GetPlayerCount() === 4) {
         this.BroadcastPlayers(null, "ready");
     }
 }
 
+// 玩家过牌
 Room.prototype.PlayerPassOperate = function(player){
     var me = this;
     var process = false;
@@ -216,6 +223,7 @@ Room.prototype.PlayerPassOperate = function(player){
     if (process) me.ProcessCheck();
 }
 
+// 添加玩家
 Room.prototype.AddPlayer = function(player)
 {
     var me = this;
@@ -467,6 +475,7 @@ Room.prototype.AddPlayer = function(player)
     GameLog(player.name + ' enter ' + me.roomName);
 }
 
+// 移除玩家
 Room.prototype.RemovePlayer = function(player, noBroadcast)
 {
     var me = this;
@@ -498,6 +507,7 @@ Room.prototype.RemovePlayer = function(player, noBroadcast)
     }
 }
 
+// 情况所有玩家
 Room.prototype.ClearAllPlayers = function()
 {
     this.players = [null, null, null, null];
@@ -508,6 +518,7 @@ Room.prototype.Update = function(dt)
 
 }
 
+// 广播
 Room.prototype.BroadcastPlayers = function(who, action, argument)
 {
     if(action === "newPlayer") {
@@ -533,6 +544,7 @@ Room.prototype.BroadcastPlayers = function(who, action, argument)
     }
 }
 
+// 广播
 Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
 {
     var player = null;
@@ -565,6 +577,7 @@ Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
     }
 }
 
+// 发送其他玩家数据
 Room.prototype.SendPlayersTo = function(who)
 {
     var player = null;
@@ -581,6 +594,7 @@ Room.prototype.SendPlayersTo = function(who)
     }
 }
 
+// 断线重连接发送所有玩家数据
 Room.prototype.SendSendPlayersByReconnection = function(who)
 {
     var roomInfo = {
@@ -757,6 +771,7 @@ Room.prototype.ChangeZhuang = function() {
     if (this.bankerPlace > 3) {
         this.bankerPlace = 0;
     }
+    ++this.bankerCount;
 }
 
 // 下家抓牌
@@ -767,22 +782,19 @@ Room.prototype.DoBackCardPlace = function() {
     }
 }
 
+// 玩家摸牌
 Room.prototype.PlayerAddCard = function() {
     // 摸牌状态
     this.state = 1;
     if (this.cardsIndex + 1 == (this.cards.length - 16)) {
         // 流局
-        Room.prototype.SendAccountsCards(this, true);
         this.ChangeZhuang();
         this.GameEnd();
-        // 新一局准备.
-        this.CancelPlayerReady();
-        this.SendPlayerReady();
     }else {
         var player = this.players[this.getCardPlace];
         var card = this.cards[this.cardsIndex++];
         
-        GameLog("cardsIndex=", this.cardsIndex);
+        //GameLog("cardsIndex=", this.cardsIndex);
 
         if (player.data.niuCards.length > 0 && 
            (card === 45 || card === 46 || card === 47))
@@ -848,6 +860,7 @@ Room.prototype.PlayerAddCard = function() {
     }
 }
 
+// 出牌检测
 Room.prototype.ThrowCardCheck = function(player, card, passPiao) {
     var otherPlayer;
     var huCards;
@@ -946,6 +959,7 @@ function RuleSort(room) {
     }
 }
 
+// 处理客户端检测事件
 Room.prototype.ProcessEvent = function(place, select, selfCheck) {
     GameLog("---------------->ProcessCheck:" + select);
     var me = this;
@@ -955,21 +969,17 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
             GameLog("玩家" + player.name + "胡牌了");
             player.HuCards();
             me.CalcPlayersScore(place, selfCheck);
+        
+            if (place !== this.bankerPlace) {
+                me.ChangeZhuang();
+            }
             // 通知
             if (selfCheck) {
                 me.BroadcastPlayers2(player, "huCards", me.cards[me.cardsIndex - 1]);
             }else {
                 me.BroadcastPlayers2(player, "huCards", me.lastThrowCard, me.lastThrowPlace);
             }
-            // 结算
-            Room.prototype.SendAccountsCards(this, false);
-            
             me.GameEnd();
-            if (me.IsFullQuan() === false) {
-                // 新一局准备.
-                me.CancelPlayerReady();
-                me.SendPlayerReady();
-            }
         }break;
         case enum_Gang: {
             if (selfCheck) {
@@ -1021,6 +1031,7 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
     }
 }
 
+// 处理检测
 Room.prototype.ProcessCheck = function() {
 
     function SimpleClone(src) {
@@ -1094,6 +1105,7 @@ Room.prototype.ProcessCheck = function() {
     }
 }
 
+// 检测手牌
 Room.prototype.TriggerSelfCheck = function(player)
 {
     var checkEvent = null;
@@ -1131,8 +1143,9 @@ Room.prototype.TriggerSelfCheck = function(player)
     }
 }
 
+// 玩家杠牌
 Room.prototype.PlayerGangCards = function (player) {
-    // 玩家碰牌
+    // 玩家杠牌
     player.PengCards(this.lastThrowCard);
     // 触发检测
     this.TriggerSelfCheck(player);
@@ -1142,6 +1155,7 @@ Room.prototype.PlayerGangCards = function (player) {
     this.getCardPlace = player.data.place;
 }
 
+// 玩家碰牌
 Room.prototype.PlayerPengCards = function (player) {
     // 玩家碰牌
     player.PengCards(this.lastThrowCard);
@@ -1153,6 +1167,7 @@ Room.prototype.PlayerPengCards = function (player) {
     this.getCardPlace = player.data.place;
 }
 
+// 玩家将牌
 Room.prototype.PlayerJiangCards = function (player) {
     // 玩家将牌
     player.AddJiangCard(this.lastThrowCard);
@@ -1164,6 +1179,7 @@ Room.prototype.PlayerJiangCards = function (player) {
     this.getCardPlace = player.data.place;
 }
 
+// 玩家坎牌
 Room.prototype.PlayerKanCards = function (player) {
     // 玩家坎牌
     player.KanCards();
@@ -1173,8 +1189,9 @@ Room.prototype.PlayerKanCards = function (player) {
     this.BroadcastPlayers2(player, "kanCards");
 }
 
+// 玩家牛牌
 Room.prototype.PlayerNiuCards = function (player) {
-    // 玩家碰牌
+    // 玩家牛牌
     var countArray = [];
     var c = 0;
     Mahjong.HasNiuCardsByHand(player.data.cards, countArray);
@@ -1196,14 +1213,15 @@ Room.prototype.PlayerNiuCards = function (player) {
     this.BroadcastPlayers2(player, "niuCards", addCards);
 }
 
+// 移除玩家上次打出的牌
 Room.prototype.RemoveLastOneInPlayerOutputCards = function() {
     var card = this.lastThrowCard;
     var place = this.lastThrowPlace;
-    var me = this;
-    var player = me.players[place];
+    var player = this.players[place];
     player.data.outputCards.pop();
 }
 
+// 计算玩家分数
 Room.prototype.CalcPlayersScore = function(winnerPlace, selfHu) {
     var me = this;
     var player, other, tempScore;
@@ -1265,12 +1283,9 @@ Room.prototype.CalcPlayersScore = function(winnerPlace, selfHu) {
         player = me.players[pi];
         player.data.totalScore += player.data.singleScore;
     }
-    
-    if (winnerPlace !== this.bankerPlace) {
-        me.ChangeZhuang();
-    }
 }
 
+// 检测包牌
 Room.prototype.CalcBaoCard = function(winnerPlace, selfHu) {
     var me = this;
     var bao = false;
@@ -1371,15 +1386,30 @@ Room.prototype.CalcBaoCard = function(winnerPlace, selfHu) {
     return bao;
 }
 
+// 单局结束
 Room.prototype.GameEnd = function() {
     this.state = 3; // 结算状态
     this.playing = false;
     ++this.playCount;
     
+    // 发送结算
+    Room.prototype.SendAccountsCards(this, true);
+    
     // 写入记录到数据库
     GameDB.UpdateRoomData(this.createUserId, Room.prototype.DBSaveRoomInfo(this));
+    
+    GameLog("quanId=" + this.quanId + " bankerCount=" + this.bankerCount + " IsFullQuan=" + this.IsFullQuan());
+    if (this.IsFullQuan() === false) {
+        // 新一局准备.
+        this.CancelPlayerReady();
+        this.SendPlayerReady();
+    }else {
+        // 总结算
+        GameLog("总结算");
+    }
 }
 
+// 发送房间信息
 Room.prototype.SendRoomInfo = function(room) {
     
     var data = {    "id"                : room.id,
@@ -1399,6 +1429,7 @@ Room.prototype.SendRoomInfo = function(room) {
     return JSON.stringify(data);
 }
 
+// 发送单句结算
 Room.prototype.SendAccountsCards = function(room, liuju) {
     
     var datas = [];
@@ -1415,6 +1446,7 @@ Room.prototype.SendAccountsCards = function(room, liuju) {
     }
 }
 
+// 房间信息存数据库
 Room.prototype.DBSaveRoomInfo = function(room) {
     
     var data = {    "id"                : room.id,

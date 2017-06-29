@@ -391,9 +391,10 @@ GameServer.prototype.JoinRoom = function(player, roomId)
                 var hunCount = roomData.hunCount;
                 var playCount = roomData.playCount;
                 var costMoney = roomData.costMoney;
+                var bankerCount = roomData.bankerCount;
                 
                 room = new Room();
-                room.Init(roomId, ownerId, ruleId, quanId, hunCount, playCount, costMoney);
+                room.Init(roomId, ownerId, ruleId, quanId, hunCount, playCount, costMoney, bankerCount);
                 room.time = roomData.time;
                 self.rooms[roomId] = room;
                 
