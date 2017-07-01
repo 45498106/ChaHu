@@ -127,5 +127,10 @@ app.get('/ShowMemoryUsage', function(req, res){
     res.end();
 });
 
+app.get('/ShowRooms', function(req, res){
+    GameServer.ShowRooms();
+    res.statusCode = 200;
+    res.end();
+});
 // 内存使用情况
 setInterval(ShowMemoryUsage, c_IntervalShowMemoryUsage);

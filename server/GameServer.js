@@ -216,7 +216,8 @@ GameServer.prototype.NewClient = function(client)
             return;
         }
         
-        var userId = client.player.id;
+        var player = client.player;
+        var userId = player.id;
         var ruleId = data.ruleId & 0x7;
         var quanId = data.quanId;
         var hunCount = data.hunCount;
@@ -235,6 +236,7 @@ GameServer.prototype.NewClient = function(client)
                 var now = new Date(roomData.time * MinuteToMicroSecond);
                 GameLog("重复创建房间, 已有roomId=", roomData.id);
                 GameLog("已创建房间时间", now);
+                player.socket.emit("gameError", { msg : "重复创建房间, 已有roomId="+roomData.id});
                 return;
             }
             
@@ -267,14 +269,14 @@ GameServer.prototype.NewClient = function(client)
             // 修正荤低
             hunCount = Math.floor(hunCount / 10) * 10;
 
-            var rs =  server.CreateRoom(client.player, ruleId, quanId, hunCount);
+            var rs =  server.CreateRoom(player, ruleId, quanId, hunCount);
             if (rs) {
-                GameDB.UpdateRoomData(userId, Room.prototype.DBSaveRoomInfo(client.player.room));
+                GameDB.UpdateRoomData(userId, Room.prototype.DBSaveRoomInfo(player.room));
                 
                 
                 var ver = typeof version === 'undefined' ? "1.0" : version;
                 if (Config.GetBranch(ver).createRoomAutoInviteRobot === true) {
-                    server.InviteRobot(client.player.room.id);
+                    server.InviteRobot(player.room.id);
                 }
             }
         });
@@ -424,8 +426,10 @@ GameServer.prototype.JoinRoom = function(player, roomId)
             if (room.GetPlayerCount() === room.players.length) {
                 // 人数已满!
                 GameLog("房间人数已满!");
+                player.socket.emit("gameError", { msg : "房间人数已满!"});
             }else {
-                GameLog("并非原房间开局时的玩家参与!");
+                GameLog("并非原房间开局时参与的玩家!");
+                player.socket.emit("gameError", { msg : "并非原房间开局时参与的玩家!"});
             }
             
             if (typeof this._robots[player.uniqueID] !== 'undefined') {
@@ -470,5 +474,22 @@ GameServer.prototype.JoinRoom = function(player, roomId)
 // 邀请机器人
 GameServer.prototype.InviteRobot = function(roomId) {
     IO.to("robotChannel").emit('inviteJionRoom', { roomId : roomId} );
+}
+
+// 显示所有房间
+GameServer.prototype.ShowRooms = function() {
+    var count = 0;
+    var playerCount = 0;
+    var room;
+    for (key in this.rooms) {
+        room = this.rooms[key];
+        if (room) {
+        
+            GameLog(room.roomName, "房间有" + room.GetPlayerCount() + "个在线玩家");
+            ++count;
+            playerCount += room.GetPlayerCount();
+        }
+    }
+    GameLog("总共有["+count+"]个房间,游戏中玩家[" +playerCount+ "]个");
 }
 

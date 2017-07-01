@@ -16,7 +16,6 @@ var enum_Jiang = 3;
 var enum_Peng = 4;
 var enum_Gang = 5;
 var enum_Hu = 6;
-var enum_Piao = 7;
 
 // 11-19 筒子
 // 21-29 万子
@@ -82,52 +81,70 @@ function Room()
 
 Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playCount, costMoney, bankerCount)
 {
-    this.id = id;
-    this.roomName = "room:"+this.id;
-    this.createUserId = createUserId;
-    this.ruleId = ruleId;
-    this.quanId = quanId;
-    this.hunCount = hunCount;
-    this.playCount = playCount;
-    this.costMoney = costMoney;
-    this.bankerCount = bankerCount;   // 庄记数
+    var me = this;
+    me.id = id;
+    me.roomName = "room:"+me.id;
+    me.createUserId = createUserId;
+    me.ruleId = ruleId;
+    me.quanId = quanId;
+    me.hunCount = hunCount;
+    me.playCount = playCount;
+    me.costMoney = costMoney;
+    me.bankerCount = bankerCount;   // 庄记数
 }
 
 Room.prototype.Shutdown = function() {
-
+    var me = this;
+    for (var i = 0; i < me.players.length; ++i) {
+        if (me.players[i]) {
+            
+            if (typeof GameServer._robots[me.players[i].uniqueID] !== 'undefined') {
+                // 机器人不写数据库
+            }else {
+                GameDB.UpdateRoomData(me.players[i].id, {});
+            }
+            
+            me.RemovePlayer(me.players[i], false);
+        }
+    }
+    delete GameServer.rooms[me.id];
 }
 
 Room.prototype.RuleHasZhuangXian = function() {
-    if ((this.ruleId & 1) === 1) {
+    var me = this;
+    if ((me.ruleId & 1) === 1) {
         return true;
     }
     return false;
 }
 
 Room.prototype.RuleCanNiu = function() {
-    if ((this.ruleId & 2) === 2) {
+    var me = this;
+    if ((me.ruleId & 2) === 2) {
         return true;
     }
     return false;
 }
 
 Room.prototype.RuleCanJiang = function() {
-    if ((this.ruleId & 4) === 4) {
+    var me = this;
+    if ((me.ruleId & 4) === 4) {
         return true;
     }
     return false;
 }
 
 Room.prototype.IsFullQuan = function() {
-    if (this.quanId === 1) {
+    var me = this;
+    if (me.quanId === 1) {
         // 1圈,4次轮庄.
-        if (this.bankerCount >= 4) {
+        if (me.bankerCount >= 1) {
             return true;
         }
     }
-    else if (this.quanId === 2) {
+    else if (me.quanId === 2) {
         // 4圈,16次轮庄.
-        if (this.bankerCount >= 16) {
+        if (me.bankerCount >= 16) {
             return true;
         }
     }
@@ -135,28 +152,31 @@ Room.prototype.IsFullQuan = function() {
     return false;
 }
 
-Room.prototype.GetFreePlace = function(id)
+Room.prototype.GetFreePlace = function()
 {
-    for (var i = 0; i < this.players.length; ++i) {
-        if (this.players[i] === null)
+    var me = this;
+    for (var i = 0; i < me.players.length; ++i) {
+        if (me.players[i] === null)
             return i;
     }
     return -1;
 }
 
-Room.prototype.GetPlayerCount = function(id)
+Room.prototype.GetPlayerCount = function()
 {
+    var me = this;
     var count = 0;
-    for (var i = 0; i < this.players.length; ++i) {
-        if (this.players[i] !== null)
+    for (var i = 0; i < me.players.length; ++i) {
+        if (me.players[i] !== null)
             ++count;
     }
     return count;
 }
 
 Room.prototype.HasPlayer = function(player){
-    for (var i = 0; i < this.players.length; ++i) {
-        if (this.players[i] !== null && this.players[i].id === player.id) {
+    var me = this;
+    for (var i = 0; i < me.players.length; ++i) {
+        if (me.players[i] !== null && me.players[i].id === player.id) {
             return true;
         }
     }
@@ -165,12 +185,13 @@ Room.prototype.HasPlayer = function(player){
 
 Room.prototype.PlayerCanEnter = function(player)
 {
-    if (this.playData === null) {
+    var me = this;
+    if (me.playData === null) {
         return true;
     }
     else {
         for (var i = 0; i < 4; ++i) {
-            if (this.playData[i].userId === player.id) {
+            if (me.playData[i].userId === player.id) {
                 return true;
             }
         }
@@ -180,29 +201,69 @@ Room.prototype.PlayerCanEnter = function(player)
 
 Room.prototype.CancelPlayerReady = function(id)
 {
-    for (var i = 0; i < this.players.length; ++i) {
-        if (this.players[i] !== null)
-            this.players[i].ready = false;
+    var me = this;
+    for (var i = 0; i < me.players.length; ++i) {
+        if (me.players[i] !== null)
+            me.players[i].ready = false;
     }
 }
 
 Room.prototype.CheckAllReady = function(id) {
+    var me = this;
     var count = 0;
-    for (var i = 0; i < this.players.length; ++i) {
-        if (this.players[i] !== null && this.players[i].ready === true)
+    for (var i = 0; i < me.players.length; ++i) {
+        if (me.players[i] !== null && me.players[i].ready === true)
             ++count;
     }
 
     if (count === 4) {
-        this.NewGame();
+        me.NewGame();
     }
 }
 
+Room.prototype.CheckAllAgreeDestoryRoom = function(timeOut) {
+    var me = this;
+    if (me.playData === null) {
+        return;
+    }
+    
+    var cannotAgree = false;
+    for (var i = 0; i < me.playData.length; ++i) {
+        if (typeof me.playData[i].agreeDestoryRoom === 'undefined') {
+            if (typeof timeOut === 'undefined') {
+                return;
+            }
+        }
+        
+        if (me.playData[i].agreeDestoryRoom === 0) {
+            cannotAgree = true;
+        }
+    }
+
+    if (cannotAgree === false) {
+        // 结算
+        GameLog(me.roomName + "发起总结算");
+        var reqEnd = 3;
+        Room.prototype.SendAccountsCards(me, reqEnd);
+        me.Shutdown();
+    }else {
+        me.BroadcastPlayers(null, "cancelDestoryRoom");
+        for (var i = 0; i < me.playData.length; ++i) {
+            me.playData[i].agreeDestoryRoom = undefined;
+        }
+    }
+    
+    if (typeof timeOut === 'undefined' && typeof me.reqDestoryRoomHandle !== 'undefined') {
+        clearTimeout(me.reqDestoryRoomHandle);
+        me.reqDestoryRoomHandle = undefined;
+    }
+}
 
 // 通知玩家准备游戏
 Room.prototype.SendPlayerReady = function(){
-    if (this.GetPlayerCount() === 4) {
-        this.BroadcastPlayers(null, "ready");
+    var me = this;
+    if (me.GetPlayerCount() === 4) {
+        me.BroadcastPlayers(null, "ready");
     }
 }
 
@@ -231,6 +292,11 @@ Room.prototype.AddPlayer = function(player)
     PROCESS_COCOS_SOCKETIO(player.socket, 'exitRoom', function (data) {
         GameLog('exitRoom');
         
+        if (me.started) {
+            GameLog("游戏已经开始,不能直接退出,只能发起总结算");
+            return;
+        }
+        
         if (typeof player.room === 'undefined') {
             GameLog("没有加入房间");
             return;
@@ -238,24 +304,64 @@ Room.prototype.AddPlayer = function(player)
         
         me.BroadcastPlayers(null, "exitRoomBack", player.id);
         
-        var clearRoom = false; 
-        if (me.createUserId === player.id) {
-            for (var i = 0; i < me.players.length; ++i) {
-                if (me.players[i]) {
-                    GameDB.UpdateRoomData(me.players[i].id, {});
-                    me.RemovePlayer(me.players[i], false);
-                }
-            }
-            clearRoom = true;
-        }
-        else {
+        if (me.createUserId !== player.id) {
             GameDB.UpdateRoomData(player.id, {});
             me.RemovePlayer(player);
         }
-        
-        if (clearRoom) {
-            delete GameServer[me.id];
+        else {
+            me.Shutdown();
         }
+    });
+    
+    PROCESS_COCOS_SOCKETIO(player.socket, 'reqDestoryRoom', function (data) {
+        GameLog('reqDestoryRoom');
+        
+        if (me.started === false) {
+            GameLog("游戏已经未开始,不用发起总结算");
+            return;
+        }
+        
+        if (typeof player.room === 'undefined') {
+            GameLog("没有加入房间");
+            return;
+        }
+        
+        for (var i = 0; i < me.playData.length; ++i) {
+            if (me.playData[i].agreeDestoryRoom === 2) {
+                GameLog("已经有人发起总结算")
+                return;
+            }
+        }
+        
+        player.data.agreeDestoryRoom = 2;
+        me.SendDestoryRoom(me);
+        me.reqDestoryRoomHandle = setTimeout(function() {
+            me.CheckAllAgreeDestoryRoom(true);
+        }.bind(), 63 * 1000);
+    });
+    
+    PROCESS_COCOS_SOCKETIO(player.socket, 'rspDestoryRoom', function (data) {
+        GameLog('reqDestoryRoom');
+        
+        if (me.started === false) {
+            GameLog("游戏已经未开始,不用发起总结算");
+            return;
+        }
+        
+        if (typeof player.room === 'undefined') {
+            GameLog("没有加入房间");
+            return;
+        }
+        
+        if (typeof player.data.agreeDestoryRoom !== 'undefined') {
+            GameLog("已经提交投票结果");
+            return;
+        }
+        
+        player.data.agreeDestoryRoom = (data.agree === 1 ? 1 : 0);
+        me.SendDestoryRoom(me);
+        // 检测是否全部投票完毕.
+        me.CheckAllAgreeDestoryRoom();
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'ready', function (data) {
@@ -289,6 +395,11 @@ Room.prototype.AddPlayer = function(player)
                 me.lastThrowCard = card;
                 me.lastThrowPlace = player.data.place;
                 me.BroadcastPlayers2(player, "throwCard", card);
+                
+                if (typeof data.piao !== 'undefined' && player.data.piao === false && player.CanPiao()) {
+                    player.data.piao = true;
+                    me.BroadcastPlayers(player, "piaoCards", { place : player.data.place, card : me.lastThrowCard });
+                }
                 
                 // 检测碰,杠,胡.
                 //    如果有玩家碰,那么通知玩家,有玩家出牌,出现时间选择是否碰牌. 非碰牌玩家依然显示玩家尚未出牌.
@@ -401,26 +512,6 @@ Room.prototype.AddPlayer = function(player)
         if (process) me.ProcessCheck();
     });
     
-    PROCESS_COCOS_SOCKETIO(player.socket, 'piaoCards', function(data) {
-        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
-        //if (player.data.piao === false && player.CanPiao()) {
-            //player.data.piao = true;
-            //me.BroadcastPlayers(player, "piaoCards", player.data.place);
-        //}
-        var process = false;
-        var checkEvent;
-        for (var i = 0; i < me.checks.length; ++i) {
-            checkEvent = me.checks[i];
-            if (checkEvent.place === player.data.place && typeof checkEvent.piao !== 'undefined') {
-                checkEvent['select'] = enum_Piao;
-                process = true;
-                break;
-            }
-        }
-        
-        if (process) me.ProcessCheck();
-    });
-    
     PROCESS_COCOS_SOCKETIO(player.socket, 'passCards', function(data) {
         if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
         me.PlayerPassOperate(player);
@@ -438,9 +529,9 @@ Room.prototype.AddPlayer = function(player)
     }
     else {
        for (var pi = 0; pi < 4; ++pi) {
-            if (this.playData[pi].userId === player.id) {
-                player.place = this.playData[pi].place;
-                player.AttachData(this.playData[pi]);
+            if (me.playData[pi].userId === player.id) {
+                player.place = me.playData[pi].place;
+                player.AttachData(me.playData[pi]);
                 break;
             }
         }
@@ -510,7 +601,8 @@ Room.prototype.RemovePlayer = function(player, noBroadcast)
 // 情况所有玩家
 Room.prototype.ClearAllPlayers = function()
 {
-    this.players = [null, null, null, null];
+    var me = this;
+    me.players = [null, null, null, null];
 }
 
 Room.prototype.Update = function(dt)
@@ -521,36 +613,42 @@ Room.prototype.Update = function(dt)
 // 广播
 Room.prototype.BroadcastPlayers = function(who, action, argument)
 {
+    var me = this;
     if(action === "newPlayer") {
-        IO.to(this.roomName).emit(action, Player.prototype.SendNewPlayer(who));
+        IO.to(me.roomName).emit(action, Player.prototype.SendNewPlayer(who));
     }else if(action === "losePlayer") {
-        IO.to(this.roomName).emit(action, Player.prototype.SendLosePlayer(who));
+        IO.to(me.roomName).emit(action, Player.prototype.SendLosePlayer(who));
     }else if(action === "newGame") {
-        IO.to(this.roomName).emit(action, argument);
+        IO.to(me.roomName).emit(action, argument);
     }else if(action === "ready") {
-        IO.to(this.roomName).emit(action);
+        IO.to(me.roomName).emit(action);
     }else if(action === 'exitRoomBack') {
-        IO.to(this.roomName).emit(action, argument);
+        IO.to(me.roomName).emit(action, argument);
     }else if (action === 'readyOk') {
-        IO.to(this.roomName).emit(action, argument);
+        IO.to(me.roomName).emit(action, argument);
     }else if (action === 'voiceBack') {
-        IO.to(this.roomName).emit(action, argument);
+        IO.to(me.roomName).emit(action, argument);
     }else if (action === 'playerReconnection') {
-        IO.to(this.roomName).emit(action, argument);
+        IO.to(me.roomName).emit(action, argument);
     }else if (action === 'playerOffline') {
-        IO.to(this.roomName).emit(action, argument);
+        IO.to(me.roomName).emit(action, argument);
     }else if (action === 'piaoCards') {
-        IO.to(this.roomName).emit(action, argument);
+        IO.to(me.roomName).emit(action, argument);
+    }else if (action === 'destoryRoomBack') {
+        IO.to(me.roomName).emit(action, argument);
+    }else if (action === 'cancelDestoryRoom') {
+        IO.to(me.roomName).emit(action);
     }
 }
 
 // 广播
 Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
 {
+    var me = this;
     var player = null;
-    for (var i = 0; i < this.players.length; ++i){
+    for (var i = 0; i < me.players.length; ++i){
     
-        player = this.players[i];
+        player = me.players[i];
         if (player === null) continue;
         
         if(action === "initCards") {
@@ -580,11 +678,12 @@ Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
 // 发送其他玩家数据
 Room.prototype.SendPlayersTo = function(who)
 {
+    var me = this;
     var player = null;
     var datas = [];
-    for (var i = 0; i < this.players.length; ++i){
+    for (var i = 0; i < me.players.length; ++i){
 
-        player = this.players[i];
+        player = me.players[i];
         if (player === null) continue;
         
         datas.push(Player.prototype.SendPlayerInfo(player));
@@ -597,33 +696,34 @@ Room.prototype.SendPlayersTo = function(who)
 // 断线重连接发送所有玩家数据
 Room.prototype.SendSendPlayersByReconnection = function(who)
 {
+    var me = this;
     var roomInfo = {
-        "bankerPlace" : this.bankerPlace, 
-        "playCount" : this.playCount,
-        "getCardPlace" : this.getCardPlace,
-        "totalScore" : [this.playData[0].totalScore,
-                        this.playData[1].totalScore,
-                        this.playData[2].totalScore,
-                        this.playData[3].totalScore]
+        "bankerPlace" : me.bankerPlace, 
+        "playCount" : me.playCount,
+        "getCardPlace" : me.getCardPlace,
+        "totalScore" : [me.playData[0].totalScore,
+                        me.playData[1].totalScore,
+                        me.playData[2].totalScore,
+                        me.playData[3].totalScore]
     }
    
     var state = {};    
-    if (this.state === 1) {
+    if (me.state === 1) {
         state.type = 1;
-        state.getCardPlace = this.getCardPlace;
-        state.getCard = this.cards[this.cardsIndex - 1];
-    }else if (this.state === 2){
+        state.getCardPlace = me.getCardPlace;
+        state.getCard = me.cards[me.cardsIndex - 1];
+    }else if (me.state === 2){
         state.type = 2;
-        state.lastThrowPlace = this.lastThrowPlace;
-        state.lastThrowCard = this.lastThrowCard;
+        state.lastThrowPlace = me.lastThrowPlace;
+        state.lastThrowCard = me.lastThrowCard;
     }else if (state.type === 3) {
         roomInfo.accounts = 1;
     }
     
     var playerData = null;
     var datas = [];
-    for (var i = 0; i < this.playData.length; ++i) {
-        playerData = this.playData[i];
+    for (var i = 0; i < me.playData.length; ++i) {
+        playerData = me.playData[i];
         datas.push(Player.prototype.SendPlayerInfoByReconnection(playerData, state, who));
     }
     if (datas.length > 0) {
@@ -689,130 +789,135 @@ Room.prototype.FixCards = function() {
 // 新一局游戏
 Room.prototype.NewGame = function()
 {
-    this.cards = staticCards.slice();
-    this.cardsIndex = 0;
-    this.started = true;
-    this.playing = true;
-    this.pause = false;
-    this.checks.splice(0, this.checks.length);
+    var me = this;
+    me.cards = staticCards.slice();
+    me.cardsIndex = 0;
+    me.started = true;
+    me.playing = true;
+    me.pause = false;
+    me.checks.splice(0, me.checks.length);
     
     // 生成游戏数据
-    if (this.playData === null) {
-        this.playData = new Array(null,null,null,null);
+    if (me.playData === null) {
+        me.playData = new Array(null,null,null,null);
         for (var pi = 0; pi < 4; ++pi) {
-            this.playData[pi] = new PlayData();
-            this.players[pi].AttachData(this.playData[pi]);
+            me.playData[pi] = new PlayData();
+            me.players[pi].AttachData(me.playData[pi]);
             
-            if (this.players[pi].id === this.createUserId) {
+            if (me.players[pi].id === me.createUserId) {
                 // 默认房主为庄
-                this.bankerPlace = pi;
+                me.bankerPlace = pi;
             }
         }
     }
  
-    if (this.costMoney === 0) {
+    if (me.costMoney === 0) {
         // 如果没有扣钱,在这里扣钱
-        this.costMoney = 1;
+        me.costMoney = 1;
     }
     
-    this.RandomCards();
-    //this.FixCards();
+    //me.RandomCards();
+    me.FixCards();
     
     // 测试
     /*for (var p = 0; p < 4; ++p) {
-        if (this.players[p].id === this.createUserId) {
+        if (me.players[p].id === me.createUserId) {
             if (p === 0) {
-                this.bankerPlace = 3;
+                me.bankerPlace = 3;
             }else {
-                this.bankerPlace = p - 1;
+                me.bankerPlace = p - 1;
             }
             break;
         }
     }*/
     
     var roomInfo = {
-        "bankerPlace" : this.bankerPlace,
-        "playCount" : this.playCount,
+        "bankerPlace" : me.bankerPlace,
+        "playCount" : me.playCount,
         "played" : 1,
-        "totalScore" : [this.playData[0].totalScore,
-                        this.playData[1].totalScore,
-                        this.playData[2].totalScore,
-                        this.playData[3].totalScore]
+        "totalScore" : [me.playData[0].totalScore,
+                        me.playData[1].totalScore,
+                        me.playData[2].totalScore,
+                        me.playData[3].totalScore]
     }
     
-    this.BroadcastPlayers(null, "newGame", roomInfo);
+    me.BroadcastPlayers(null, "newGame", roomInfo);
     
     // 发牌
     var initCards = new Array(13);
     var i,j;
     for (i = 0; i < 4; ++i) {
-        for (j = 0; j < 13; ++j, ++this.cardsIndex) {
-            initCards[j] = this.cards[this.cardsIndex];
+        for (j = 0; j < 13; ++j, ++me.cardsIndex) {
+            initCards[j] = me.cards[me.cardsIndex];
         }
         
-        this.players[i].InitCards(initCards);
+        me.players[i].InitCards(initCards);
         //GameLog(initCards, i);
     }
     
     var player;
     for (i = 0; i < 4; ++i) {
-        player = this.players[i];
-        this.BroadcastPlayers2(player, "initCards");
+        player = me.players[i];
+        me.BroadcastPlayers2(player, "initCards");
     }
     
     // 庄家先摸牌
-    this.getCardPlace = this.bankerPlace;
-    this.PlayerAddCard();
+    me.getCardPlace = me.bankerPlace;
+    me.PlayerAddCard();
 }
 
 // 下庄
 Room.prototype.ChangeZhuang = function() {
-    ++this.bankerPlace;
-    if (this.bankerPlace > 3) {
-        this.bankerPlace = 0;
+    var me = this;
+    ++me.bankerPlace;
+    if (me.bankerPlace > 3) {
+        me.bankerPlace = 0;
     }
-    ++this.bankerCount;
+    ++me.bankerCount;
 }
 
 // 下家抓牌
 Room.prototype.DoBackCardPlace = function() {
-    this.getCardPlace = this.getCardPlace + 1;
-    if (this.getCardPlace === 4) { 
-        this.getCardPlace = 0; 
+    var me = this;
+    me.getCardPlace = me.getCardPlace + 1;
+    if (me.getCardPlace === 4) { 
+        me.getCardPlace = 0; 
     }
 }
 
 // 玩家摸牌
 Room.prototype.PlayerAddCard = function() {
+    var me = this;
     // 摸牌状态
-    this.state = 1;
-    if (this.cardsIndex + 1 == (this.cards.length - 16)) {
+    me.state = 1;
+    if (me.cardsIndex + 1 == (me.cards.length - 16)) {
         // 流局
-        this.ChangeZhuang();
-        this.GameEnd();
+        var liujuEnd = 1;
+        me.ChangeZhuang();
+        me.GameEnd(liujuEnd);
     }else {
-        var player = this.players[this.getCardPlace];
-        var card = this.cards[this.cardsIndex++];
+        var player = me.players[me.getCardPlace];
+        var card = me.cards[me.cardsIndex++];
         
-        //GameLog("cardsIndex=", this.cardsIndex);
+        //GameLog("cardsIndex=", me.cardsIndex);
 
         if (player.data.niuCards.length > 0 && 
            (card === 45 || card === 46 || card === 47))
         {
             // 补牛
             player.AddNiuCard(card);
-            this.BroadcastPlayers2(player, "addNiuCard", card);
+            me.BroadcastPlayers2(player, "addNiuCard", card);
             
             // 等待一秒继续补牌
-            var getCardPlace = this.getCardPlace;
-            this.getCardPlace = -1;
+            var getCardPlace = me.getCardPlace;
+            me.getCardPlace = -1;
             function AddCardNextSecond(room, getCardPlace) {
                 return function () {
                     room.getCardPlace = getCardPlace;
                     room.PlayerAddCard();
                 };
             }
-            setTimeout(AddCardNextSecond(this, getCardPlace), 2000);
+            setTimeout(AddCardNextSecond(me, getCardPlace), 2000);
         }
         else {
             
@@ -835,7 +940,7 @@ Room.prototype.PlayerAddCard = function() {
                 checkEvent.kan = 1;
             }
             
-            if (this.RuleCanNiu() && player.data.canNiu) {
+            if (me.RuleCanNiu() && player.data.canNiu) {
                 if (checkEvent === null) {
                     checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
                 }
@@ -850,32 +955,25 @@ Room.prototype.PlayerAddCard = function() {
             }
             
             if (checkEvent !== null) {
-                this.checks.push(checkEvent);
+                me.checks.push(checkEvent);
                 GameLog("trigger checkEvent(add card)---------------->");
             }
             
-            var remainNumber = (this.cards.length - 1) - this.cardsIndex;
-            this.BroadcastPlayers2(player, "getCard", card, remainNumber);
+            var remainNumber = (me.cards.length - 1) - me.cardsIndex;
+            me.BroadcastPlayers2(player, "getCard", card, remainNumber);
         }
     }
 }
 
 // 出牌检测
-Room.prototype.ThrowCardCheck = function(player, card, passPiao) {
+Room.prototype.ThrowCardCheck = function(player, card) {
+    var me = this;
     var otherPlayer;
     var huCards;
     var checkEvent = null;
     
-    if (typeof passPiao === 'undefined' && player.data.piao === false && player.CanPiao()) {
-        player.data.piaoCard = card;
-        checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
-        checkEvent.piao = 1;
-        this.checks.push(checkEvent);
-        return true;
-    }
-    
     for (var i = 0; i < 4; ++i) {
-        otherPlayer = this.players[i];
+        otherPlayer = me.players[i];
         if (otherPlayer.data.place === player.data.place)
             continue;
             
@@ -898,7 +996,7 @@ Room.prototype.ThrowCardCheck = function(player, card, passPiao) {
         }
         
         // 将牌
-        if (this.RuleCanJiang() && otherPlayer.data.piao === false) {
+        if (me.RuleCanJiang() && otherPlayer.data.piao === false) {
             var nextPlace = player.data.place + 1;
             if (nextPlace === 4) { 
                 nextPlace = 0; 
@@ -925,12 +1023,12 @@ Room.prototype.ThrowCardCheck = function(player, card, passPiao) {
         }
         
         if (checkEvent !== null) {
-            this.checks.push(checkEvent);
+            me.checks.push(checkEvent);
             GameLog("trigger checkEvent(throw card)---------------->");
         }
     }
     
-    return this.checks.length > 0;
+    return me.checks.length > 0;
 }
 
 function RuleSort(room) {
@@ -970,7 +1068,7 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
             player.HuCards();
             me.CalcPlayersScore(place, selfCheck);
         
-            if (place !== this.bankerPlace) {
+            if (place !== me.bankerPlace) {
                 me.ChangeZhuang();
             }
             // 通知
@@ -979,7 +1077,8 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
             }else {
                 me.BroadcastPlayers2(player, "huCards", me.lastThrowCard, me.lastThrowPlace);
             }
-            me.GameEnd();
+            var huEnd = 2;
+            me.GameEnd(huEnd);
         }break;
         case enum_Gang: {
             if (selfCheck) {
@@ -1007,25 +1106,10 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
             me.PlayerJiangCards(player);
             me.RemoveLastOneInPlayerOutputCards();
         }break;
-        case enum_Piao : {
-            player.data.piao = true;
-            me.BroadcastPlayers(player, "piaoCards", { place : player.data.place, card : player.data.piaoCard });
-            if (false === me.ThrowCardCheck(player, me.lastThrowCard)) {
-                me.DoBackCardPlace();
-                me.PlayerAddCard();
-            }
-        }break;
         case enum_Pass: {
             if (selfCheck === false) {
                 me.DoBackCardPlace();
                 me.PlayerAddCard();
-            }else {
-                if (player.data.piao === false && player.CanPiao()) {
-                    if (false === me.ThrowCardCheck(player, me.lastThrowCard, true)) {
-                        me.DoBackCardPlace();
-                        me.PlayerAddCard();
-                    }
-                }
             }
         }break;
     }
@@ -1047,9 +1131,6 @@ Room.prototype.ProcessCheck = function() {
         if (typeof checkEvent.select !== "undefined") {
             return checkEvent.select;
         }
-        
-        if (typeof checkEvent.piao !== 'undefined') 
-            return enum_Piao;
 
         if (typeof checkEvent.hu !== 'undefined') 
             return enum_Hu;
@@ -1108,6 +1189,7 @@ Room.prototype.ProcessCheck = function() {
 // 检测手牌
 Room.prototype.TriggerSelfCheck = function(player)
 {
+    var me = this;
     var checkEvent = null;
     if (Mahjong.HasGangCardsByHand(player.data.cards)) {
         if (checkEvent === null) {
@@ -1123,7 +1205,7 @@ Room.prototype.TriggerSelfCheck = function(player)
         checkEvent.kan = 1;
     }
     
-    if (this.RuleCanNiu() && player.data.canNiu) {
+    if (me.RuleCanNiu() && player.data.canNiu) {
         if (checkEvent === null) {
             checkEvent = { 'place' : player.data.place, 'selfCheck' : 1 };
         }
@@ -1145,52 +1227,57 @@ Room.prototype.TriggerSelfCheck = function(player)
 
 // 玩家杠牌
 Room.prototype.PlayerGangCards = function (player) {
+    var me = this;
     // 玩家杠牌
-    player.PengCards(this.lastThrowCard);
+    player.PengCards(me.lastThrowCard);
     // 触发检测
-    this.TriggerSelfCheck(player);
+    me.TriggerSelfCheck(player);
     // 通知
-    this.BroadcastPlayers2(player, "pengCards", this.lastThrowCard, this.lastThrowPlace);
+    me.BroadcastPlayers2(player, "pengCards", me.lastThrowCard, me.lastThrowPlace);
     // 改变出牌位置
-    this.getCardPlace = player.data.place;
+    me.getCardPlace = player.data.place;
 }
 
 // 玩家碰牌
 Room.prototype.PlayerPengCards = function (player) {
+    var me = this;
     // 玩家碰牌
-    player.PengCards(this.lastThrowCard);
+    player.PengCards(me.lastThrowCard);
     // 触发检测
-    this.TriggerSelfCheck(player);
+    me.TriggerSelfCheck(player);
     // 通知
-    this.BroadcastPlayers2(player, "pengCards", this.lastThrowCard, this.lastThrowPlace);
+    me.BroadcastPlayers2(player, "pengCards", me.lastThrowCard, me.lastThrowPlace);
     // 改变出牌位置
-    this.getCardPlace = player.data.place;
+    me.getCardPlace = player.data.place;
 }
 
 // 玩家将牌
 Room.prototype.PlayerJiangCards = function (player) {
+    var me = this;
     // 玩家将牌
-    player.AddJiangCard(this.lastThrowCard);
+    player.AddJiangCard(me.lastThrowCard);
     // 触发检测
-    this.TriggerSelfCheck(player);
+    me.TriggerSelfCheck(player);
     // 通知
-    this.BroadcastPlayers2(player, "jiangCards", this.lastThrowCard, this.lastThrowPlace);
+    me.BroadcastPlayers2(player, "jiangCards", me.lastThrowCard, me.lastThrowPlace);
     // 改变出牌位置
-    this.getCardPlace = player.data.place;
+    me.getCardPlace = player.data.place;
 }
 
 // 玩家坎牌
 Room.prototype.PlayerKanCards = function (player) {
+    var me = this;
     // 玩家坎牌
     player.KanCards();
     // 触发检测
-    this.TriggerSelfCheck(player);
+    me.TriggerSelfCheck(player);
     // 通知
-    this.BroadcastPlayers2(player, "kanCards");
+    me.BroadcastPlayers2(player, "kanCards");
 }
 
 // 玩家牛牌
 Room.prototype.PlayerNiuCards = function (player) {
+    var me = this;
     // 玩家牛牌
     var countArray = [];
     var c = 0;
@@ -1203,21 +1290,22 @@ Room.prototype.PlayerNiuCards = function (player) {
     var addNum = c - 3;
     var addCards = [];
     for (i = 0; i < addNum; ++i) {
-        addCards.push(this.cards[this.cardsIndex++]);
+        addCards.push(me.cards[me.cardsIndex++]);
     }
     player.NiuCards(countArray, addCards);
     
     // 触发检测
-    this.TriggerSelfCheck(player);
+    me.TriggerSelfCheck(player);
     // 通知
-    this.BroadcastPlayers2(player, "niuCards", addCards);
+    me.BroadcastPlayers2(player, "niuCards", addCards);
 }
 
 // 移除玩家上次打出的牌
 Room.prototype.RemoveLastOneInPlayerOutputCards = function() {
-    var card = this.lastThrowCard;
-    var place = this.lastThrowPlace;
-    var player = this.players[place];
+    var me = this;
+    var card = me.lastThrowCard;
+    var place = me.lastThrowPlace;
+    var player = me.players[place];
     player.data.outputCards.pop();
 }
 
@@ -1225,7 +1313,7 @@ Room.prototype.RemoveLastOneInPlayerOutputCards = function() {
 Room.prototype.CalcPlayersScore = function(winnerPlace, selfHu) {
     var me = this;
     var player, other, tempScore;
-    var hasZhuangXian = this.RuleHasZhuangXian();
+    var hasZhuangXian = me.RuleHasZhuangXian();
     var winner = me.players[winnerPlace];
     
     if (winner.data.piao) {
@@ -1245,7 +1333,7 @@ Room.prototype.CalcPlayersScore = function(winnerPlace, selfHu) {
                 other = me.players[j];
 
                 tempScore = player.data.score - other.data.score;
-                if (hasZhuangXian && (i === this.bankerPlace || j === this.bankerPlace)) {
+                if (hasZhuangXian && (i === me.bankerPlace || j === me.bankerPlace)) {
                     // 庄闲翻倍
                     tempScore *= 2;
                 }
@@ -1254,9 +1342,9 @@ Room.prototype.CalcPlayersScore = function(winnerPlace, selfHu) {
                     // 飘牌翻倍 + 荤低
                     tempScore *= 2;
                     if (tempScore >= 0) {
-                        tempScore += this.hunCount;
+                        tempScore += me.hunCount;
                     }else {
-                        tempScore -= this.hunCount;
+                        tempScore -= me.hunCount;
                     }
                 }
 
@@ -1387,25 +1475,26 @@ Room.prototype.CalcBaoCard = function(winnerPlace, selfHu) {
 }
 
 // 单局结束
-Room.prototype.GameEnd = function() {
-    this.state = 3; // 结算状态
-    this.playing = false;
-    ++this.playCount;
+Room.prototype.GameEnd = function(status) {
+    var me = this;
+    me.state = 3; // 结算状态
+    me.playing = false;
+    ++me.playCount;
     
     // 发送结算
-    Room.prototype.SendAccountsCards(this, true);
+    Room.prototype.SendAccountsCards(me, status);
     
     // 写入记录到数据库
-    GameDB.UpdateRoomData(this.createUserId, Room.prototype.DBSaveRoomInfo(this));
+    GameDB.UpdateRoomData(me.createUserId, Room.prototype.DBSaveRoomInfo(me));
     
-    GameLog("quanId=" + this.quanId + " bankerCount=" + this.bankerCount + " IsFullQuan=" + this.IsFullQuan());
-    if (this.IsFullQuan() === false) {
+    if (me.IsFullQuan() === false) {
         // 新一局准备.
-        this.CancelPlayerReady();
-        this.SendPlayerReady();
+        me.CancelPlayerReady();
+        me.SendPlayerReady();
     }else {
         // 总结算
-        GameLog("总结算");
+        GameLog(me.roomName +　"总结算");
+        me.Shutdown();
     }
 }
 
@@ -1429,21 +1518,45 @@ Room.prototype.SendRoomInfo = function(room) {
     return JSON.stringify(data);
 }
 
-// 发送单句结算
-Room.prototype.SendAccountsCards = function(room, liuju) {
-    
+// 发送单局结算 status 1.流局 2.胡牌 3.发起结算 
+Room.prototype.SendAccountsCards = function(room, status) {
+    var me = room;
     var datas = [];
     var player = null;
-    for (var i = 0; i < room.players.length; ++i){
-        player = room.players[i];
-        datas.push(Player.prototype.SendAllCards(player));
+    
+    for (var i = 0; i < me.playData.length; ++i){
+        datas.push(Player.prototype.SendAllCards(me.playData[i]));
     }
     
-    var status = liuju ? 1 : 2;
-    for (var j = 0; j < room.players.length; ++j){
-        player = room.players[j];
-        player.socket.emit("accounts", { status : status , playData : datas });
+    var totalScore = [me.playData[0].totalScore,
+                      me.playData[1].totalScore,
+                      me.playData[2].totalScore,
+                      me.playData[3].totalScore]
+    
+    var gameEnd = status === 3 ? true : me.IsFullQuan();
+    var msg;
+    for (var j = 0; j < me.players.length; ++j){
+        player = me.players[j];
+        if (player) {
+            msg = { status : status , playData : datas, totalScore : totalScore };
+            if (gameEnd === true) {
+                msg.gameEnd = gameEnd;
+            }
+            player.socket.emit("accounts", msg);
+        }
     }
+}
+
+// 发送总结算
+Room.prototype.SendDestoryRoom = function(room) {
+    var me = room;
+    var data = [-1,-1,-1,-1];
+    for (var i = 0; i < me.playData.length; ++i) {
+        if (typeof me.playData[i].agreeDestoryRoom !== 'undefined') {
+            data[i] = me.playData[i].agreeDestoryRoom;
+        }
+    }
+    me.BroadcastPlayers(null, "destoryRoomBack", data);
 }
 
 // 房间信息存数据库

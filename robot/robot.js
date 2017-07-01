@@ -248,6 +248,14 @@ function Register(socket) {
         }
     });
     
+    socket.on('accounts', function(msg) {
+        GameLog("accounts", msg);
+        if (typeof msg.gameEnd !== 'undefined') {
+            GameLog(socket.robotId+"离开房间:"+socket.player.roomData.id);
+            delete socket.player.roomData;
+        }
+    });
+    
     socket.on('ready', function(msg) {
         socket.emit('ready');
     });

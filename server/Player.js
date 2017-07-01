@@ -98,6 +98,11 @@ Player.prototype.CanPiao = function() {
             return true;
         }
         
+        if  (this.data.cards[0] === this.data.cards[2] &&
+            this.data.cards[1] === this.data.cards[3]) {
+            return true;
+        }
+        
         if  (this.data.cards[0] === this.data.cards[3] && 
             this.data.cards[2] === this.data.cards[1]) {
             return true;
@@ -484,10 +489,6 @@ Player.prototype.SendThrowCard = function(player, card, self)
     if (self.data.place !== player.data.place) {
         self.CalcThrowCradOperation(data, card, player.data.place);
     }else {
-        if (player.data.piao === false && player.CanPiao()) {
-            data['piao'] = 1;
-        }
-        
         var huCards = self.GetHuCards();
         if (huCards.length > 0) {
             data['huCards'] = huCards;
@@ -803,31 +804,31 @@ Player.prototype.SendPlayerInfoByReconnection = function(playerData, status, sel
 }
 
 
-Player.prototype.SendAllCards = function(player) 
+Player.prototype.SendAllCards = function(playerData) 
 {
-    var data = {    "place"             : player.data.place,
-                    "score"             : player.data.score,
-                    "singleScore"       : player.data.singleScore,
-                    "cards"             : player.data.cards, };
+    var data = {    "place"             : playerData.place,
+                    "score"             : playerData.score,
+                    "singleScore"       : playerData.singleScore,
+                    "cards"             : playerData.cards, };
     
-    if (player.data.pengCards.length > 0) {
-        data.pengCards = player.data.pengCards;
+    if (playerData.pengCards.length > 0) {
+        data.pengCards = playerData.pengCards;
     }
     
-    if (player.data.gangCards.length > 0) {
-        data.gangCards = player.data.gangCards;
+    if (playerData.gangCards.length > 0) {
+        data.gangCards = playerData.gangCards;
     }
     
-    if (player.data.kanCards.length > 0) {
-        data.kanCards = player.data.kanCards;
+    if (playerData.kanCards.length > 0) {
+        data.kanCards = playerData.kanCards;
     }
     
-    if (player.data.niuCards.length > 0) {
-        data.niuCards = player.data.niuCards;
+    if (playerData.niuCards.length > 0) {
+        data.niuCards = playerData.niuCards;
     }
     
-    if (player.data.jiangCards.length > 0) {
-        data.jiangCards = player.data.jiangCards;
+    if (playerData.jiangCards.length > 0) {
+        data.jiangCards = playerData.jiangCards;
     }
 
     return data;
