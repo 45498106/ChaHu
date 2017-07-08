@@ -247,6 +247,7 @@ function GetHuCards(handCards, huCards) {
     for ( i= 0; i < handCards.length; ++i ) {
         c[handCards[i]] += 1;
         if (c[handCards[i]] > 4) {
+            GameLog("胡牌计算错误,牌["+handCards[i]+"]超过4张.");
             return false;
         }
     }
@@ -271,11 +272,11 @@ function GetHuCards(handCards, huCards) {
     return hu;
 }
 
-// 是否可飘胡
+// 已经有将了.是否可胡
 function GetJiangHuCards(handCards, huCards) {
 
     if (handCards.length > 11 || handCards.length < 2) {
-        console.log("手牌不能大于11张牌,小于2张牌");
+        GameLog("手牌不能大于11张牌,小于2张牌");
         return false;   // 手牌不能大于11张牌,小于2张牌
     }
     
@@ -290,6 +291,7 @@ function GetJiangHuCards(handCards, huCards) {
     for ( i = 0; i < handCards.length; ++i ) {
         c[handCards[i]] += 1;
         if (c[handCards[i]] > 4) {
+            GameLog("胡牌计算错误,牌["+handCards[i]+"]超过4张.");
             return false;
         }
     }

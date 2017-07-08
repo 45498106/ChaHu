@@ -816,20 +816,8 @@ Room.prototype.NewGame = function()
         me.costMoney = 1;
     }
     
-    //me.RandomCards();
-    me.FixCards();
-    
-    // 测试
-    /*for (var p = 0; p < 4; ++p) {
-        if (me.players[p].id === me.createUserId) {
-            if (p === 0) {
-                me.bankerPlace = 3;
-            }else {
-                me.bankerPlace = p - 1;
-            }
-            break;
-        }
-    }*/
+    me.RandomCards();
+    //me.FixCards();
     
     var roomInfo = {
         "bankerPlace" : me.bankerPlace,
