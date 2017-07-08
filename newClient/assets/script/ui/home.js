@@ -35,12 +35,12 @@ cc.Class({
         this.idLabel.string = "ID:" + GameData.userId;
         this.cardLabel.string = GameData.userRoomCard;
         
-        
+        console.log("-------->", GameData.userHeadUrl);
         SetSpriteImage(this.headSprite, {url: GameData.userHeadUrl, type:'jpg'});
         
         
         // 获得buttons
-        GameSocket().Send("homeButtons", window.GameVersion);
+        GameSocket().Send("homeButtons", { version : window.GameVersion });
         
         // 获得房间数据
         GameSocket().Send("getRoomRecord");
@@ -49,6 +49,7 @@ cc.Class({
         GameEvent().OnEvent("GetRoomRecordSuccess", this.OnGetRoomRecordSucces, this);
         GameEvent().OnEvent("CreateRoomSuccess", this.OnCreateRoomSuccess, this);
         GameEvent().OnEvent("JoinRoomSuccess", this.OnJoinRoomSucces, this);
+        GameEvent().OnEvent("reconnectedServer", this.OnReconnectedServer, this);
         
         // 播放声音
         var audioMng = AudioMng();
@@ -73,8 +74,13 @@ cc.Class({
     },
     
     OnRuleDesc : function() {
+        //if (cc.sys.isNative) {
+        //jsb.reflection.callStaticMethod("AppController", 'shareWithWeixinFriendTxt:txt:url:', '新沂查虎麻将', '房间ID:888888 http://mjcs.leanapp.cn. <a href="www.baidu.com">百度</a>', 'xinyichahu://?roomid=888888');
+        //}
+        //else
+        //{
         this.descPanel.getComponent("description").OnShow();
-        //Notify().Play("加班实现中，敬请期待");
+        //}
     },
     
     OnHistory : function() {
@@ -82,7 +88,7 @@ cc.Class({
     },
     
     OnSetting : function() {
-        Notify().Play("加班实现中，敬请期待");
+        window.OpenSetting();
     },
     
     OnAddGold : function() {
@@ -133,11 +139,17 @@ cc.Class({
         var roomId = GameData.userRoomData.id;
         if (typeof roomId === 'number')
         {
-            // 延迟3秒进入房间.
+            // 延迟1秒进入房间.
             this.scheduleOnce(function() {
                 // 这里的 this 指向 component
                 GameSocket().Send("joinRoom", {roomId : roomId});
-             }, 3);
+            }, 1);
+        }
+        else {
+            if (typeof window.schemeRoomId === 'number') {
+                GameSocket().Send("joinRoom", {roomId : window.schemeRoomId});
+                window.schemeRoomId = undefined;
+            }
         }
     },
     
@@ -149,6 +161,16 @@ cc.Class({
     OnCreateRoomSuccess : function() {
         Notify().Continue();
         cc.director.loadScene('game');        
+    },
+    
+    OnReconnectedServer : function() {
+        if (typeof GameData.validUniqueID === 'undefined') {
+            cc.director.loadScene('login');        
+        }
+        else 
+        {
+            GameSocket().Send("reconnect", {uniqueID : GameData.validUniqueID} );
+        }
     },
     
 

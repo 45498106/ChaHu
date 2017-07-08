@@ -61,7 +61,7 @@ cc.Class({
         var quanId = this._juToggleId;
         var hunCount = (Math.ceil(this.progressBar.progress * 10) / 10) * 100;
         
-        GameSocket().Send("createRoom", {ruleId:ruleId, quanId:quanId, hunCount:hunCount});
+        GameSocket().Send("createRoom", {ruleId:ruleId, quanId:quanId, hunCount:hunCount, version:window.GameVersion});
         
         Notify().PlayWaitSrv();
     },

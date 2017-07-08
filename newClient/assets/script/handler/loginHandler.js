@@ -31,6 +31,7 @@ enterGameBack['Process'] = function (message) {
         GameData.userHeadUrl = message.headUrl;
     }
     
+    GameData.validUniqueID = GameData.uniqueID;
     GameEvent().SendEvent("LoginSuccess");
 };
 MessageHandler.Add(enterGameBack);

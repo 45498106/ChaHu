@@ -2,6 +2,14 @@ var Util = require('Utility');
 var Player = require('player');
 var MessageHandler = require("msgHandler");
 
+var reconnectBack = {};
+reconnectBack['interest'] = "reconnectBack";
+reconnectBack['Process'] = function (data) {
+    // send event.
+    GameEvent().SendEvent('ReconnectBack');
+};
+MessageHandler.Add(reconnectBack);
+
 
 var getRoomRecordBack = {};
 getRoomRecordBack['interest'] = "getRoomRecordBack";
@@ -23,6 +31,8 @@ createRoomBack['Process'] = function (data) {
     //GameLog(data);
 
     GameData.userRoomData = JSON.parse(data);
+    GameData.gameEnd = false;
+    
     // 进入游戏
     GameEvent().SendEvent('CreateRoomSuccess');
 };
@@ -37,12 +47,8 @@ exitRoomBack['Process'] = function (data) {
         if (GameData.userRoomData.ownerId === playerId) {
             // 解散房间
             GameEvent().SendEvent('ExitRoom');
-            GameData.selfPlace = -1;
-            GameData.players = new Array(null,null,null,null);
         }else if (playerId === GameData.players[GameData.selfPlace].id) {
             GameEvent().SendEvent('ExitRoom');
-            GameData.selfPlace = -1;
-            GameData.players = new Array(null,null,null,null);
         }
     }
 };
@@ -57,6 +63,8 @@ joinRoomBack['Process'] = function (data) {
     //GameLog(data);
     
     GameData.userRoomData = JSON.parse(data);
+    GameData.gameEnd = false;
+    
     // 进入游戏
     GameEvent().SendEvent('JoinRoomSuccess');
 };
@@ -238,12 +246,17 @@ throwCard['Process'] = function (data) {
     if (GameData.selfPlace === place) {
         Util.ArrayRemoveElemnt(player.cards, card);
         player.cards.sort();
+        
+        if (typeof data.huCards !== 'undefined') {
+            GameData.huCards = data.huCards.slice();
+        }else {
+            if (GameData.huCards.length > 0) {
+                GameData.huCards = [];
+            }
+        }
+    
     }else {
         player.cards.pop();
-    }
-    
-    if (typeof data.huCards !== 'undefined') {
-        GameData.huCards = data.huCards.slice();
     }
     
     // 通知
@@ -583,6 +596,16 @@ accounts['Process'] = function (datas) {
         }
     }
     
+    if (typeof datas.totalScore === 'object') {
+        for (var i = 0; i < GameData.players.length; ++i) {
+            GameData.players[i].totalScore = datas.totalScore[i];
+        }
+    }
+    
+    if (typeof datas.gameEnd !== 'undefined') {
+        GameData.gameEnd = true;
+    }
+    
     GameData.getCardPlace = -1;
     // 通知
     GameEvent().SendEvent('Accounts', datas);
@@ -591,5 +614,33 @@ accounts['Process'] = function (datas) {
 MessageHandler.Add(accounts);
 
 
+////////////////////////////////////////////////////////////////////////////////
+var voiceBack = {};
+voiceBack['interest'] = 'voiceBack';
+voiceBack['Process'] = function(data) {
+    // 通知
+    GameEvent().SendEvent('VoiceBack', data);
+}
+
+MessageHandler.Add(voiceBack);
 
 
+////////////////////////////////////////////////////////////////////////////////
+var cancelDestoryRoom = {};
+cancelDestoryRoom['interest'] = 'cancelDestoryRoom';
+cancelDestoryRoom['Process'] = function(data) {
+    // 通知
+    GameEvent().SendEvent('CancelDestoryRoom', data);
+}
+
+MessageHandler.Add(cancelDestoryRoom);
+
+////////////////////////////////////////////////////////////////////////////////
+var destoryRoomBack = {};
+destoryRoomBack['interest'] = 'destoryRoomBack';
+destoryRoomBack['Process'] = function(data) {
+    // 通知
+    GameEvent().SendEvent('DestoryRoomBack', data);
+}
+
+MessageHandler.Add(destoryRoomBack);

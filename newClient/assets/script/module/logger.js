@@ -11,9 +11,7 @@ var Logger = function ()
 
     var args = Array.prototype.slice.call(arguments);
     args.unshift(time);
-    if (!cc.sys.isNative) {
-        console.log.apply(console, args);
-    }
+    console.log.apply(console, args);
     
     if (typeof this.socket !== 'undefined' && this.socket.connected === true) {
         this.socket.send(JSON.stringify(args));

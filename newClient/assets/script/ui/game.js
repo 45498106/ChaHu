@@ -14,8 +14,30 @@ function IsValidCard(card) {
     return false;
 }
 
+// 是否可飘
+function CanPiao(cards) {
+    if (cards.length === 1) {
+        return true;
+    }
+    else if (cards.length === 4) {
+        if (cards[0] === cards[1] && 
+            cards[2] === cards[3]) {
+            return true;        
+        }
+        
+        if (cards[0] === cards[2] && 
+            cards[1] === cards[3]) {
+            return true;        
+        }
+        
+        if (cards[0] === cards[3] && 
+            cards[1] === cards[2]) {
+            return true;        
+        }
+    }
+}
+
 var GetFrontPlayer = function() {
- 
     if (GameData.selfPlace === 0) {
         return GameData.players[3];
     } else {
@@ -70,11 +92,11 @@ cc.Class({
     extends: cc.Component,
 
     properties: {
-        hotUpdate : cc.Node,
-        
         playingPnl : cc.Node,
         accountsPnl : cc.Node,
+        totalAccountsPnl : cc.Node,
         preparePnl : cc.Node,
+        destoryRoomPnl : cc.Node,
         
         preSelfHead : cc.Node,
         selfReady : cc.Sprite,
@@ -101,6 +123,7 @@ cc.Class({
         gap : cc.Prefab,
         gap_v : cc.Prefab,
         gap_u : cc.Prefab,
+        selfCardPrefab : cc.Prefab,
         cardPrefab : cc.Prefab,
         
         gangPrefab : cc.Prefab,
@@ -181,6 +204,9 @@ cc.Class({
         piaoArrow : cc.Node,
         
         tingCardsNotify : cc.Node,
+        
+        voiceMonitor : cc.Node,
+        voiceVolumeSpr : cc.Sprite,
     },
 
     // use this for initialization
@@ -191,10 +217,9 @@ cc.Class({
         this.exitRoomBtn.node.on('click', this.OnExitRoom, this);
         this.settingBtn.node.on('click', this.OnSetting, this);
         this.shortWordBtn.node.on('click', this.OnShortWord, this);
-        this.voiceBtn.node.on('click', this.OnVoice, this);
+        //this.voiceBtn.node.on('click', this.OnVoice, this);
         this.inviteBtn.node.on('click', this.OnInvitePlayer, this);
         this.readyBtn.node.on('click', this.OnReady, this);
-        this.countiuBtn.node.on('click', this.OnContinue, this);
         
         this.opBtnGuo.node.on('click', this.OnOpGuo, this);
         this.opBtnZha.node.on('click', this.OnOpZha, this);
@@ -228,6 +253,13 @@ cc.Class({
         GameEvent().OnEvent('PiaoCards', this.OnPiaoCards, this);
         GameEvent().OnEvent('HuCards', this.OnHuCards, this);
         GameEvent().OnEvent('Accounts', this.OnAccounts, this);
+        GameEvent().OnEvent('CloseAccuoutsPanel', this.OnCloseAccounts, this);
+        GameEvent().OnEvent('CloseTotalAccuoutsPanel', this.OnCloseTotalAccounts, this);
+        GameEvent().OnEvent('VoiceBack', this.OnVoiceBack, this);
+        GameEvent().OnEvent('DestoryRoomBack', this.OnDestoryRoomBack, this);
+        
+        GameEvent().OnEvent("reconnectedServer", this.OnReconnectedServer, this);
+        GameEvent().OnEvent("ReconnectBack", this.OnReconnectBack, this);
         
         // 播放声音
         var audioMng = AudioMng();
@@ -245,6 +277,105 @@ cc.Class({
         }
         
         this.UpdataTimeLabel();
+        
+        // 初始化录音sdk
+        this.InitVoice();
+    },
+    
+    InitVoice : function() {
+        
+        if (!cc.sys.isNative) {
+            this.voiceBtn.node.active = false;
+            return;
+        }
+        
+        this.voiceQueue = [];
+        this.voicePlaying = false;
+        this.downloading = false;
+        this.onceRecord = false;
+        var filePath = jsb.fileUtils.getWritablePath() + "/tempRecord.dat";
+        
+        function onTouchDown (event) {
+            this.voiceMonitor.active = true;
+            
+            var audioMng = AudioMng();
+            if (audioMng) audioMng.pauseAll();
+            
+            window.Voice().StartRecording(filePath);
+            this.onceRecord = true;
+            this.recordNeedCancel = false;
+            
+            this.voiceMonitor.getChildByName('frame1').active = true;
+            this.voiceMonitor.getChildByName('frame2').active = false;
+        }
+        
+        function onTouchMove (event) {
+            var touches = event.getTouches();
+            var pos = this.voiceBtn.node.convertTouchToNodeSpace(touches[0]);
+            var btnSize = this.voiceBtn.node.getContentSize();
+            var rect = new cc.rect(0,0, btnSize.width,  btnSize.height);
+            if (rect.contains(pos)) {
+                this.voiceMonitor.getChildByName('frame1').active = true;
+                this.voiceMonitor.getChildByName('frame2').active = false;
+                this.recordNeedCancel = false;
+            }
+            else {
+                if(pos.y > (btnSize.height) + 80) {
+                    this.voiceMonitor.getChildByName('frame1').active = false;
+                    this.voiceMonitor.getChildByName('frame2').active = true;
+                    this.recordNeedCancel = true;
+                }
+            }
+        }
+        
+        function onTouchUp(event) {
+            this.onceRecord = false;
+            this.voiceMonitor.active = false;
+            window.Voice().StopRecording();
+            
+            if(this.recordNeedCancel === false) {
+                var seconds = window.Voice().GetRecordedSeconds(filePath);
+                if (seconds < 0.5) {
+                    Notify().Play("录音失败,录音时间太短");
+                }
+                else {
+                    window.Voice().UploadRecordedFile(filePath);
+                    window.Voice().SetUploadCallback(function(fileID) {
+                        GameSocket().Send("voice", {place:GameData.selfPlace, fileID:fileID});
+                    })
+                }
+            }
+                
+            var audioMng = AudioMng();
+            if (audioMng) audioMng.resumeAll();
+        }
+        
+        this.voiceBtn.node.on('touchstart', onTouchDown, this);
+        this.voiceBtn.node.on('touchmove', onTouchMove, this);
+        this.voiceBtn.node.on('touchend', onTouchUp, this);
+        this.voiceBtn.node.on('touchcancel', onTouchUp, this);
+        
+        // 初始化录音sdk
+        window.Voice().Init();
+        
+        window.LoadAllVoiceVolumeSriteFrame();
+    },
+    
+    OnReconnectedServer : function() {
+        if (typeof GameData.validUniqueID === 'undefined') {
+            if (typeof this._timeOutHandle !== 'undefined') {
+                clearTimeout(this._timeOutHandle);
+                this._timeOutHandle = undefined;
+            }
+            cc.director.loadScene('login');        
+        }
+        else {
+            GameSocket().Send("reconnect", {uniqueID : GameData.validUniqueID} );
+        }
+    },
+    
+    OnReconnectBack : function() {
+        this.ExitRoom();
     },
     
     PlayCountDown : function() {
@@ -340,6 +471,7 @@ cc.Class({
             if (nowMintues < 10) {
                 nowMintues = "0" + nowMintues;
             }
+            if (this.node === null) { return };
             this.timeLabel.string = nowHours + ":" + nowMintues;
         }.bind(this));
         
@@ -431,7 +563,7 @@ cc.Class({
     PlayingShow : function() {
         this.playingPnl.active = true;
         this.preparePnl.active = false;
-        this.accountsPnl.getComponent('accounts').OnHide();
+        this.accountsPnl.getComponent('accounts').OnHide(true);
         
         this.ClearAllOutput();
         this.InitPlayingHead();
@@ -503,7 +635,7 @@ cc.Class({
         nameLable.string = player.name;
         
         var headSprite = preHeadNode.getChildByName("headIcon").getComponent('cc.Sprite');
-        SetSpriteImage(headSprite, player.headUrl);
+        SetSpriteImage(headSprite, {url: player.headUrl, type:'jpg'});
         
         var rootSprite = preHeadNode.getChildByName("root").getComponent('cc.Sprite');
         rootSprite.node.active = false;
@@ -564,7 +696,7 @@ cc.Class({
             nameLable.string = player.name;
    
             var headSprite = headNode.getChildByName("headIcon").getComponent('cc.Sprite');
-            SetSpriteImage(headSprite, player.headUrl);
+            SetSpriteImage(headSprite, {url: player.headUrl, type:'jpg'});
             
             var rootSprite = headNode.getChildByName("root").getComponent('cc.Sprite');
             rootSprite.node.active = false;
@@ -715,27 +847,74 @@ cc.Class({
     },
     
     OnExitRoom : function() {
-        GameSocket().Send("exitRoom");
+        if (GameData.gameEnd === true) {
+            this.ExitRoom();
+        }
+        else {
+            if (GameData.userRoomData.playConnt > 0 || GameData.userRoomData.played === 1) {
+                this.destoryRoomPnl.getComponent('destoryRoom').OnShow(true);
+            }
+            else {
+                GameSocket().Send("exitRoom");
+            }
+        }
     },
     
     ExitRoom : function() {
         if (typeof this._timeOutHandle !== 'undefined') {
             clearTimeout(this._timeOutHandle);
+            this._timeOutHandle = undefined;
         }
         
-        cc.director.loadScene('home'); 
+        cc.director.loadScene('home');
+        GameData.ClearGamePlayers();
     },
     
     OnInvitePlayer : function() {
-        Notify().Play("加班实现中，敬请期待");
+        WeiXin().InviteFriend();
     },
     
     OnVoice : function() {
-        Notify().Play("加班实现中，敬请期待");
+        //Notify().Play("加班实现中，敬请期待");
+        if (cc.sys.os === cc.sys.OS_IOS)
+        {
+            if (typeof this.onceRecord === 'undefined') {
+                this.onceRecord = false;
+            }
+            
+            var filePath = jsb.fileUtils.getWritablePath() + "/record.dat";
+            if (this.onceRecord === true) {
+                this.onceRecord = false;
+                window.Voice().StopRecording();
+                var seconds = window.Voice().GetRecordedSeconds(filePath);
+                GameLog("file time:" + seconds);
+                var rst = window.Voice().PlayRecordedFile(filePath);
+                if (rst === false) {
+                    var audioMng = AudioMng();
+                    if (audioMng) audioMng.resumeAll();
+                }
+                else {
+                    window.Voice().SetPlayRecordedFileEndCallback(function () {
+                        var audioMng = AudioMng();
+                        if (audioMng) audioMng.resumeAll();
+                    });
+                    
+                    window.Voice().UploadRecordedFile(filePath);
+                }
+            }
+            else if (this.onceRecord === false) {
+                
+                var audioMng = AudioMng();
+                if (audioMng) audioMng.pauseAll();
+            
+                window.Voice().StartRecording(filePath);
+                this.onceRecord = true;
+            }
+        }
     },
     
     OnSetting : function() {
-        Notify().Play("加班实现中，敬请期待");
+        window.OpenSetting();
     },
     
     OnShortWord : function() {
@@ -743,11 +922,6 @@ cc.Class({
     },
     
     OnReady : function() {
-        GameSocket().Send("ready");
-    },
-    
-    OnContinue : function() {
-        this.accountsPnl.getComponent('accounts').OnHide();
         GameSocket().Send("ready");
     },
     
@@ -1078,6 +1252,42 @@ cc.Class({
                 this.accountsPnl.getComponent('accounts').OnShow();
             }.bind(this), this);
         }
+        else if(datas.status === 3) {
+            this.destoryRoomPnl.getComponent('destoryRoom').OnHide();
+            this.accountsPnl.getComponent('accounts').OnShow();
+        }
+    },
+    
+    OnCloseAccounts : function(event) {
+        // reflush totalScore for player head.
+        this.InitPlayingHead();
+        
+        if (GameData.gameEnd === true) {
+            // open total Accounts
+            this.totalAccountsPnl.getComponent('totalAccounts').OnShow();
+        }else {
+            GameSocket().Send("ready");
+        }
+    },
+    
+    OnCloseTotalAccounts : function(event) {
+        this.ExitRoom();
+    },
+    
+    OnVoiceBack : function(event) {
+        if (!cc.sys.isNative) {
+            return;
+        }
+        
+        var data = event.detail;
+        this.voiceQueue.push(data);
+    },
+    
+    OnDestoryRoomBack : function(event) {
+        var data = event.detail;
+        var script = this.destoryRoomPnl.getComponent('destoryRoom');
+        script.OnShow(false);
+        script.Reload(data);
     },
     
     OnOpGuo : function() {
@@ -1119,13 +1329,21 @@ cc.Class({
     },
     
     OnOpGuo2 : function() {
-        GameSocket().Send('passCards');
+        //GameSocket().Send('passCards');
         this.HiddenOperat2();
+        this.DelLastThrowCardByPlace(this.piaoThrowCard);
+        GameSocket().Send('needThrowCard',  {
+            "card" : this.piaoThrowCard
+        });
     },
     
     OnOpPiao : function() {
         this.HiddenOperat2();
-        GameSocket().Send('piaoCards');
+        //GameSocket().Send('piaoCards');
+        this.DelLastThrowCardByPlace(this.piaoThrowCard);
+        GameSocket().Send('needThrowCard',  {
+            "card" : this.piaoThrowCard, "piao" : 1,
+        });
     },
     
     OnOpXi : function() {
@@ -1138,9 +1356,21 @@ cc.Class({
 
     NeedThrowCards : function(cardIndex) {
         if (GameData.selfPlace === GameData.getCardPlace) {
-            GameSocket().Send('needThrowCard',  { 
-                "card" : GameData.players[GameData.selfPlace].cards[cardIndex] 
-            });
+            var player = GameData.players[GameData.selfPlace];
+            var tempCards = player.cards.slice();
+            var card = player.cards[cardIndex];
+            Util.ArrayRemoveElemnt(tempCards, card);
+            if (player.piao === false && CanPiao(tempCards)) {
+                this.ShowOperat2(false, true);
+                this.SelfInitCards(tempCards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+                this.SelfThrowCard(card);
+                this.piaoThrowCard = card;
+            }
+            else {
+                GameSocket().Send('needThrowCard',  {
+                    "card" : GameData.players[GameData.selfPlace].cards[cardIndex]
+                });
+            }
         }
     },
 
@@ -1400,6 +1630,33 @@ cc.Class({
         }
     },
 
+    CheckDoubleClick : function(cardSpr) {
+        if (typeof cardSpr.clickCount === 'undefined') {
+            cardSpr.clickCount = 1;
+            cardSpr.node.y = 30;
+                    
+            if (this.selectThrowCard !== null) {
+                this.selectThrowCard.node.y = 0;
+                this.selectThrowCard.clickCount = undefined;
+            }
+            this.selectThrowCard = cardSpr;
+            //cardSpr.scheduleOnce(function(){
+            //    this.clickCount = -1;  
+            //},1);
+        }
+        //else if (cardSpr.clickCount === -1) {
+        //    cardSpr.clickCount = undefined;
+        //    cardSpr.node.y = 0;
+        //    this.selectThrowCard = null;
+        //}
+        else {
+            this.NeedThrowCards(cardSpr.node.cardIndex);
+        }
+        
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playButton();
+    },
+
     // 初始自己的手牌
     SelfInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
         this.selfHand.removeAllChildren();
@@ -1411,14 +1668,15 @@ cc.Class({
                               kanCards, niuCards, jiangCards);
         
         // 添加手牌
+        this.selectThrowCard = null;
         var inst, spr;
         for (var i = 0; i < cards.length; ++i) {
-            inst = cc.instantiate(this.cardPrefab);
-            spr = inst.getComponent(cc.Sprite);
+            inst = cc.instantiate(this.selfCardPrefab);
+            spr = inst.getChildByName('img').getComponent(cc.Sprite);
             spr.spriteFrame = CardSpriteFrameCache[1][cards[i]];
             spr.node.cardIndex = i;
-            spr.node.on(cc.Node.EventType.TOUCH_END, function (event) {
-                this.NeedThrowCards(event.target.cardIndex);
+            inst.on(cc.Node.EventType.TOUCH_END, function (event) {
+                this.CheckDoubleClick(event.target.getChildByName('img').getComponent(cc.Sprite));
             }.bind(this), this);
             this.selfHand.addChild(inst);
         }
@@ -1427,12 +1685,12 @@ cc.Class({
     // 自己摸牌
     SelfAddCard : function(card, index) {
         var gap = cc.instantiate(this.gap);
-        var cardInst = cc.instantiate(this.cardPrefab);
-        var spr = cardInst.getComponent(cc.Sprite);
+        var cardInst = cc.instantiate(this.selfCardPrefab);
+        var spr = cardInst.getChildByName('img').getComponent(cc.Sprite);
         spr.spriteFrame = CardSpriteFrameCache[1][card];
         spr.node.cardIndex = index;
-        spr.node.on(cc.Node.EventType.TOUCH_END, function (event) {
-            this.NeedThrowCards(event.target.cardIndex);
+        cardInst.on(cc.Node.EventType.TOUCH_END, function (event) {
+            this.CheckDoubleClick(event.target.getChildByName('img').getComponent(cc.Sprite));
         }.bind(this), this);
             
         this.selfHand.addChild(gap);
@@ -1625,8 +1883,64 @@ cc.Class({
         }
     },
     
+    voicePoll : function() {
+        if (!cc.sys.isNative) {
+            return;
+        }
+        
+        if (typeof this.voiceQueue === 'undefined')
+            return; // no initialized.
+        
+        window.Voice().Poll();
+        
+        if (this.onceRecord === true && this.recordNeedCancel === false) {
+            var rt = window.Voice().GetMicLevel();
+            //GameLog("GetMicLevel:" + rt);
+            var lv = Math.floor(rt / 2000);
+            if (lv > 6) {
+                lv = 6;
+            }
+            this.voiceVolumeSpr.spriteFrame = window.VoiceVolumeSriteFrameCache[lv];
+        }
+        
+        if (this.voiceQueue.length > 0 && this.downloading === false && this.voicePlaying === false) {
+            
+            if (this.onceRecord === true) { return } // 正在录音中，不播下载的文件
+            
+            var filePath = jsb.fileUtils.getWritablePath() + "/record.dat";
+            var data = this.voiceQueue[0];
+            var self = this;
+            window.Voice().DownloadRecordedFile(data.fileID, filePath);
+            window.Voice().SetDownloadCallback(function(fileID) {
+                self.voiceQueue.shift();
+                self.downloading = false;
+                self.voicePlaying = true;
+                var filePath = jsb.fileUtils.getWritablePath() + "/record.dat";
+                
+                var audioMng = AudioMng();
+                if (audioMng) audioMng.pauseAll();
+                
+                var rst = window.Voice().PlayRecordedFile(filePath);
+                if (rst === false) {
+                    var audioMng = AudioMng();
+                    if (audioMng) audioMng.resumeAll();
+                    self.voicePlaying = false;
+                }
+                else {
+                    window.Voice().SetPlayRecordedFileEndCallback(function () {
+                        var audioMng = AudioMng();
+                        if (audioMng) audioMng.resumeAll();
+                        self.voicePlaying = false;
+                    });
+                }
+            });
+            this.downloading = true;
+        }
+    },
+    
 
     // called every frame, uncomment this function to activate update callback
-    //update: function (dt) {
-    //},
+    update: function (dt) {
+        this.voicePoll();
+    },
 });

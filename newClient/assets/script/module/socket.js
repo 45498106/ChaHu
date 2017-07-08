@@ -87,17 +87,22 @@ var Socket = function() {
 Socket.prototype.Init = function() {
     this.init = true;
     
+    this.doReconnect = false;
     this.connected = false;
     this.socket = null;
     this.pingInterval = 0;
-    this.connected = false;
+    this.firstConnected = true;
 }
     
 Socket.prototype.Connect =  function (address, port, router) 
 {
     var self = this;
-    if (self.connected) 
+    if (self.connected)
         return;
+    
+    self.address = address;
+    self.port = port;
+    self.router = router;
     
     try {
         
@@ -132,22 +137,35 @@ Socket.prototype.Connect =  function (address, port, router)
         socket.on('connect', function() {
             self.connected = true;
             GameLog("连接成功");
-            GameEvent().SendEvent('connectedServer');
+            Notify().Continue();
+            if (self.firstConnected === false) {
+                GameEvent().SendEvent('reconnectedServer');    
+            }else {
+                GameEvent().SendEvent('connectedServer');
+            }
+            self.firstConnected = false;
         });
 
         socket.on('disconnect', function() {
+            if (self.firstConnected === false || self.doReconnect) {
+                Notify().Play("与服务器断开链接,努力重连接中!", true);
+            }else {
+                Notify().Play("请检查网络链接状态!", true);
+            }
+            var connected = self.connected;
             self.connected = false;
             GameEvent().SendEvent('disconnectedServer');
-            GameLog("你已经断开链接. 请刷新页面.");
+            GameLog("你已和服务器断开链接.");
             if (heartbeatHandler) {
                 clearInterval(heartbeatHandler);
                 heartbeatHandler = null;
             }
-            //self.Connect(address, port, router);
+            //if (connected) {
+                self.Reconnect();
+            //}
         });
         
         socket.on('error', function(event) {
-           self.connected = false;
            GameEvent().SendEvent('socket throw error');
            GameLog("webSocket throw a error"+event);
         });
@@ -157,6 +175,14 @@ Socket.prototype.Connect =  function (address, port, router)
     } catch (e) {
         GameLog(e);
     }
+}
+
+Socket.prototype.Reconnect = function() {
+    setTimeout(function() {
+        Notify().PlayWaitSrv();
+        this.doReconnect = true;
+        this.Connect(this.address, this.port, this.router);
+    }.bind(this), 5000);
 }
     
 Socket.prototype.IsConnected = function() {

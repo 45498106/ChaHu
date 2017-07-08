@@ -58,8 +58,14 @@ cc.Class({
         this.SetScore();
     },
     
-    OnHide : function() {
+    OnHide : function(notSendEvent) {
         this.node.active = false;
+        
+        if (typeof notSendEvent !== 'undefined' && notSendEvent === true) {
+            return;
+        }
+        
+        GameEvent().SendEvent('CloseAccuoutsPanel');
     },
     
     
@@ -185,14 +191,13 @@ cc.Class({
     
     
     SetHeads : function() {
-        GameLog(GameData);
         var head, player;
         for (var i = 0; i < 4; ++i) {
             player = GameData.players[i];
             head = this.heads[i];
             
             var headIcon = head.getChildByName('headIcon').getComponent(cc.Sprite);
-            SetSpriteImage(headIcon, player.headUrl);
+            SetSpriteImage(headIcon, {url: player.headUrl, type:'jpg'});
             
             if (GameData.userRoomData.bankerPlace === i) {
                 head.getChildByName("zhuang").active = true;

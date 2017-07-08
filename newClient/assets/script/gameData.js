@@ -4,7 +4,6 @@
         loginMenu : [],
         homeButtons : [],
         
-        
     	userId : -1,
     	userName : "",
     	userHeadUrl : "",
@@ -20,7 +19,7 @@
         needFlushCard : false,
         resumeGame : false,
         selfOperation : null,
-        
+        gameEnd : false,
     }
     
     GameData.GetUserId = function () {
@@ -52,6 +51,11 @@
             }
         }
         return count;
+    }
+    
+    GameData.ClearGamePlayers = function() {
+        GameData.selfPlace = -1;
+        GameData.players = new Array(null,null,null,null);
     }
     
     if(typeof module !== 'undefined')
