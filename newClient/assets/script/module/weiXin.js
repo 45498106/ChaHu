@@ -18,6 +18,20 @@ WebWeiXin.prototype.Init = function() {
     
 }
 
+WebWeiXin.prototype.Installed = function() {
+    if (!cc.sys.isNative) {
+        return false;
+    }
+    else if (cc.sys.os === cc.sys.OS_ANDROID) {
+        return false;
+    }
+    else if (cc.sys.os === cc.sys.OS_IOS) {
+        return jsb.reflection.callStaticMethod("AppController", 'isWXAppInstalled');
+    }
+    
+    return false;
+}
+
 WebWeiXin.prototype.AuthRequest = function() {
     if (!cc.sys.isNative) {
         this.WebAuthCode();

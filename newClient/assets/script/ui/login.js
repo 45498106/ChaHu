@@ -87,6 +87,12 @@ cc.Class({
     onWeiXinLogin : function() {
         if (GameSocket().IsConnected()) {
             if (cc.sys.isNative) {
+                
+                if (WeiXin().Installed() === false) {
+                    Notify().Play("请先安装微信!");
+                    return;
+                }
+                
                 WeiXin().SetCallBack(function(result) {
                     if (result === false)
                     {
