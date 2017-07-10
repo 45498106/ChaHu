@@ -83,10 +83,10 @@ MySQL.prototype.Query = function(commond, func)
 {
     if (this.connected == true && this.connection) {
         try {
-            var startTime = (new Date()).getMilliseconds();
+            var startTime = (new Date()).getTime();
             var t = this.connection.query(commond, function (err, results, fields) {
-                var endTime = (new Date()).getMilliseconds();
-                GameLog("查询用时:",(endTime - startTime), "ms");
+                var endTime = (new Date()).getTime();
+                GameLog("[" + startTime%10000 + "]查询用时:", (endTime - startTime), "ms");
                 if (err) {
                     if(err.code === 'ER_PARSE_ERROR') {
                         GameLog("查询语句解析错误!", err);
@@ -99,7 +99,7 @@ MySQL.prototype.Query = function(commond, func)
                 if (typeof func === 'function')
                     func(results, fields);
             });
-            GameLog("SQL->", t.sql);
+            GameLog("[" + startTime%10000 + "]SQL->", t.sql);
         } catch (e) {
             GameLog("查询错误" + e);
         }
@@ -109,11 +109,11 @@ MySQL.prototype.Query = function(commond, func)
  MySQL.prototype.Query2 = function(commond, array, func)
 {
     if (this.connected == true && this.connection) {
-        var startTime = (new Date()).getMilliseconds();
         try {
+            var startTime = (new Date()).getTime();
             var t = this.connection.query(commond, array, function (err, results, fields) {
-                var endTime = (new Date()).getMilliseconds();
-                GameLog("查询用时:",(endTime - startTime), "ms");
+                var endTime = (new Date()).getTime();
+                GameLog("[" + startTime%10000 + "]查询用时:", (endTime - startTime), "ms");
                 if (err) { 
                     if(err.code === 'ER_PARSE_ERROR') {
                         GameLog("查询语句解析错误!", err);
@@ -126,7 +126,7 @@ MySQL.prototype.Query = function(commond, func)
                 if (typeof func === 'function')
                     func(results, fields);
             });
-            GameLog("SQL->", t.sql);
+            GameLog("[" + startTime%10000 + "]SQL->", t.sql);
         } catch (e) {
             GameLog("查询错误" + e);
         }

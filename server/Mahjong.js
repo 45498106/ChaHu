@@ -49,6 +49,36 @@ function CanJiangCards(cards, card) {
     return count === 1;
 }
 
+// 可否吃牌
+function CanChiCards(cards, card) {
+    var array = [0,0,0,0];
+    for (var i = 0; i < cards.length; ++i) {
+        if (cards[i] === (card - 1)) {
+            array[1] += 1;
+        } else if (cards[i] === (card + 1)) {
+            array[2] += 1;
+        } else if (cards[i] === (card - 2)) {
+            array[0] += 1;
+        } else if (cards[i] === (card + 2)) {
+            array[3] += 1;
+        }
+    }
+
+    if (array[0] > 0 && array[1] > 0) {
+        return true;
+    }
+
+    if (array[2] > 0 && array[3] > 0) {
+        return true;
+    }
+
+    if (array[1] > 0 && array[2] > 0) {
+        return true;
+    }
+
+    return false;
+}
+
 // 是否有杠牌
 function HasGangCards(cards, card) {
     var count = 0;
@@ -316,6 +346,46 @@ function GetJiangHuCards(handCards, huCards) {
     return hu;
 }
 
+
+// 获得吃牌组合
+function GetChiCards(handCards, throwCard, chiCards) {
+    var cards = handCards;
+    var card = throwCard;
+    var count = 0;
+    var array = [0,0,0,0];
+    for (var i = 0; i < cards.length; ++i) {
+        if (cards[i] === (card - 1)) {
+            array[1] += 1;
+        } else if (cards[i] === (card + 1)) {
+            array[2] += 1;
+        } else if (cards[i] === (card - 2)) {
+            array[0] += 1;
+        } else if (cards[i] === (card + 2)) {
+            array[3] += 1;
+        }
+    }
+
+    if (array[0] > 0 && array[1] > 0) {
+        ++count;
+        if (typeof chiCards !== 'undefined' && chiCards)
+            chiCards.push([card - 2, card - 1, card]);
+    }
+
+    if (array[2] > 0 && array[3] > 0) {
+        ++count;
+        if (typeof chiCards !== 'undefined' && chiCards)
+            chiCards.push([card, card + 1, card + 2]);
+    }
+
+    if (array[1] > 0 && array[2] > 0) {
+        ++count;
+        if (typeof chiCards !== 'undefined' && chiCards)
+            chiCards.push([card - 1, card, card + 1]);
+    }
+
+    return count > 0;
+}
+
 function IsFirstType(card) {
     if (card === 11 || card === 19)  {
         return true;
@@ -341,6 +411,7 @@ if(typeof module !== 'undefined') {
     module.exports.CanGangCards = CanGangCards;
     module.exports.CanKanCards = CanKanCards;
     module.exports.CanJiangCards = CanJiangCards;
+    module.exports.CanChiCards = CanChiCards;
     module.exports.HasGangCards = HasGangCards;
     module.exports.HasGangCardsByHand = HasGangCardsByHand;
     module.exports.HasKanCards = HasKanCards;
@@ -348,6 +419,7 @@ if(typeof module !== 'undefined') {
     module.exports.HasNiuCardsByHand = HasNiuCardsByHand;
     module.exports.GetHuCards = GetHuCards;
     module.exports.GetJiangHuCards = GetJiangHuCards;
+    module.exports.GetChiCards = GetChiCards;
     module.exports.IsFirstType = IsFirstType;
     module.exports.IsValidCard = IsValidCard;
 }
