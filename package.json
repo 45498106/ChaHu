@@ -20,8 +20,10 @@
     "game"
   ],
   "dependencies": {
+    //"cos-nodejs-sdk-v5": "^2.0.2",
     "express": "^4.13.4",
-    "leanengine": "^1.0.0-beta",
+    "express-ws": "^3.0.0",
+    //"leanengine": "^1.0.0-beta",
     "mysql": "^2.13.0",
     "socket.io": "^1.4.8"
   },
