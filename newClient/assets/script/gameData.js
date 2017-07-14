@@ -57,7 +57,7 @@
         GameData.selfPlace = -1;
         GameData.players = new Array(null,null,null,null);
     }
-    
+
     if(typeof module !== 'undefined')
         module.exports = GameData;
         

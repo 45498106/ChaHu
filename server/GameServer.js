@@ -63,6 +63,16 @@ GameServer.prototype.GenRoomId = function()
     return  Util.RandomRange(100000, 999999);
 }
 
+GameServer.prototype.DeleteRoom = function(roomId) {
+    if (typeof this.rooms[roomId] !== 'undefined') {
+        delete this.rooms[roomId];
+    }
+}
+
+GameServer.prototype.IsRobot = function(robotId) {
+    return typeof this._robots[robotId] !== 'undefined';
+}
+
 GameServer.prototype.NewClient = function(client)
 {
     var socket = client.socket;
@@ -283,7 +293,7 @@ GameServer.prototype.NewClient = function(client)
     });
     
     PROCESS_COCOS_SOCKETIO(socket, 'joinRoom', function (data) {
-        GameLog('joinRoom');
+        // GameLog('joinRoom');
         // 加入房间
         if (typeof client.player === 'undefined') {
             GameLog("不合法的消息请求");
@@ -356,7 +366,7 @@ GameServer.prototype.CreateRoom = function(player, ruleId, quanId, hunCount)
     }
     
     var userId = player.id;
-    var room = new Room();
+    var room = new Room(this);
     room.Init(roomId, userId, ruleId, quanId, hunCount, 0, 0, 0);
     this.rooms[roomId] = room;
    
@@ -367,17 +377,18 @@ GameServer.prototype.CreateRoom = function(player, ruleId, quanId, hunCount)
     room.AddPlayer(player);
     player.room = room;
     
+    GameLog("玩家[" + player.name + "]创建房间:"+ roomId);
     return true;
 }
 
 GameServer.prototype.JoinRoom = function(player, roomId)
 {
-    GameLog(roomId);
+    // GameLog(roomId);
     var room = null;
-    var self = this;
+    var server = this;
     var userId = player.id;
-    if (typeof this.rooms[roomId] === 'undefined' ||
-        this.rooms[roomId] === null) {
+    if (typeof server.rooms[roomId] === 'undefined' ||
+        server.rooms[roomId] === null) {
         GameDB.GetUserData(userId, function(result, dbData){
             if (result === false) {
                 return;
@@ -395,10 +406,10 @@ GameServer.prototype.JoinRoom = function(player, roomId)
                 var costMoney = roomData.costMoney;
                 var bankerCount = roomData.bankerCount;
                 
-                room = new Room();
+                room = new Room(server);
                 room.Init(roomId, ownerId, ruleId, quanId, hunCount, playCount, costMoney, bankerCount);
                 room.time = roomData.time;
-                self.rooms[roomId] = room;
+                server.rooms[roomId] = room;
                 
                 // 响应消息
                 player.socket.emit('joinRoomBack', Room.prototype.SendRoomInfo(room));
@@ -406,6 +417,8 @@ GameServer.prototype.JoinRoom = function(player, roomId)
                 // 添加玩家
                 player.room = room;
                 room.AddPlayer(player);
+
+                GameLog("玩家[" + player.name + "]创建房间:"+ roomId);
             }
             else {
                 player.socket.emit("gameError", { msg : "房间不存在!"});
@@ -415,7 +428,7 @@ GameServer.prototype.JoinRoom = function(player, roomId)
         return;
     }
     else {
-        room = this.rooms[roomId];
+        room = server.rooms[roomId];
         
         if (room.HasPlayer(player)){
             GameLog("重复加入房间!");
@@ -425,14 +438,16 @@ GameServer.prototype.JoinRoom = function(player, roomId)
         if (room.GetPlayerCount() === room.players.length || room.PlayerCanEnter(player) === false) {
             if (room.GetPlayerCount() === room.players.length) {
                 // 人数已满!
-                GameLog("房间人数已满!");
+                if (typeof server._robots[player.uniqueID] === 'undefined') {
+                    GameLog("房间人数已满!");
+                }
                 player.socket.emit("gameError", { msg : "房间人数已满!"});
             }else {
                 GameLog("并非原房间开局时参与的玩家!");
                 player.socket.emit("gameError", { msg : "并非原房间开局时参与的玩家!"});
             }
             
-            if (typeof this._robots[player.uniqueID] !== 'undefined') {
+            if (typeof server._robots[player.uniqueID] !== 'undefined') {
                 // 机器人不写数据库
                 return;
             }
@@ -461,9 +476,12 @@ GameServer.prototype.JoinRoom = function(player, roomId)
         room.AddPlayer(player);
         
         
-        if (typeof this._robots[player.uniqueID] !== 'undefined') {
+        if (typeof server._robots[player.uniqueID] !== 'undefined') {
             // 机器人不写数据库
+            GameLog("机器人[" + player.name + "]加入房间:"+ roomId);
             return;
+        }else {
+            GameLog("玩家[" + player.name + "]加入房间:"+ roomId);
         }
         
         // 写入记录到数据库

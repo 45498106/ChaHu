@@ -87,7 +87,7 @@ cc.Class({
     },
     
     SetCards : function() {
-        var player, cards, niuCards, gangCards, kanCards, pengCards, jiangCards;
+        var player, cards, niuCards, gangCards, kanCards, pengCards, jiangCards, chiCards;
         var inst, spr, children, k, c;
         for (var i = 0; i < 4; ++i) {
             player = GameData.players[i];
@@ -97,6 +97,7 @@ cc.Class({
             kanCards = player.kanCards;
             pengCards = player.pengCards;
             jiangCards = player.jiangCards;
+            chiCards = player.chiCards;
             
             this.cards[i].removeAllChildren();
             
@@ -149,9 +150,21 @@ cc.Class({
                 this.cards[i].addChild(inst);
                 this.cards[i].addChild(cc.instantiate(this.gapPrefab));
             }
+
+            for (k = 0; chiCards && k < chiCards.length; k+=3) {
+                var inst = cc.instantiate(this.pengPrefab);
+                var children = inst.children;
+                for (c = 0; c < children.length; c++) {
+                    var spr = children[c].getComponent(cc.Sprite);
+                    spr.spriteFrame = CardSpriteFrameCache[3][chiCards[k+c]];
+                }
+                
+                this.cards[i].addChild(inst);
+                this.cards[i].addChild(cc.instantiate(this.gapPrefab));
+            }
      
             for (k = 0; jiangCards && k < jiangCards.length; k+=2) {
-                inst = cc.instantiate(jiangPrefab);
+                inst = cc.instantiate(this.jiangPrefab);
                 children = inst.children;
                 for (c = 0; c < children.length; c++) {
                     spr = children[c].getComponent(cc.Sprite);
@@ -159,7 +172,7 @@ cc.Class({
                 }
             
                 this.cards[i].addChild(inst);
-                this.cards[i].addChild(cc.instantiate(gapPrefab));
+                this.cards[i].addChild(cc.instantiate(this.gapPrefab));
             }
             
             

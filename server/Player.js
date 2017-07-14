@@ -36,6 +36,7 @@ Player.prototype.InitCards = function(cards)
     this.data.gangCards.splice(0, this.data.gangCards.length);
     this.data.kanCards.splice(0, this.data.kanCards.length);
     this.data.niuCards.splice(0, this.data.niuCards.length);
+    this.data.chiCards.splice(0, this.data.chiCards.length);
     this.data.jiangCards.splice(0, this.data.jiangCards.length);
     
     this.data.score = 0;
@@ -89,6 +90,10 @@ Player.prototype.CanJiangCards = function(card) {
 }
 
 Player.prototype.CanPiao = function() {
+    if (this.data.chiCards.length > 0) {
+        return false;
+    }
+
     if (this.data.cards.length === 1){
         return true;
     }
@@ -98,12 +103,12 @@ Player.prototype.CanPiao = function() {
             return true;
         }
         
-        if  (this.data.cards[0] === this.data.cards[2] &&
+        if (this.data.cards[0] === this.data.cards[2] &&
             this.data.cards[1] === this.data.cards[3]) {
             return true;
         }
         
-        if  (this.data.cards[0] === this.data.cards[3] && 
+        if (this.data.cards[0] === this.data.cards[3] && 
             this.data.cards[2] === this.data.cards[1]) {
             return true;
         }
@@ -142,6 +147,17 @@ Player.prototype.AddJiangCard = function(card) {
     this.data.jiangCards.push(card);
     
     Util.ArrayRemoveElemnt(this.data.cards, card);
+}
+
+Player.prototype.AddChiCard = function(card, array) {
+    for (var i = 0; i < 3; ++i) {
+        if (card !== array[i]) {
+            Util.ArrayRemoveElemnt(this.data.cards, array[i]);
+        }
+        this.data.chiCards.push(array[i]);
+    }
+
+    this.data.updateHucards = true;
 }
 
 Player.prototype.ThrowCard = function(card) {
@@ -298,6 +314,8 @@ Player.prototype.KanCards = function() {
         }
         // 也可能不胡了,重新计算下
         this.CalcHuCard();
+
+        return card;
     }
 }
 
@@ -373,6 +391,16 @@ Player.prototype.CalcGetCradOperation = function(data, card) {
 
 
 Player.prototype.CalcThrowCradOperation = function(data, card, throwCardPlace) {
+
+    function BIsANextPlace(placeA, placeB) {
+        var nextPlace = placeA + 1;
+        if (nextPlace === 4) { 
+            nextPlace = 0; 
+        }
+
+        return nextPlace === placeB;
+    }
+    
     var self = this;
     if (self.data.piao === false && Mahjong.CanPengCards(self.data.cards, card)) {
         data['peng'] = 1;
@@ -384,13 +412,22 @@ Player.prototype.CalcThrowCradOperation = function(data, card, throwCardPlace) {
     }
 
     if (self.room.RuleCanJiang() && self.data.piao === false) {
-        var nextPlace = throwCardPlace + 1;
-        if (nextPlace === 4) { 
-            nextPlace = 0; 
-        }
-        
-        if (nextPlace === self.data.place && self.CanJiangCards(card)) {
+        if(BIsANextPlace(throwCardPlace, self.data.place) &&
+           self.CanJiangCards(card)) {
             data['jiang'] = 1;
+        }
+    }
+
+    if (self.room.RuleCanChi() &&
+        BIsANextPlace(throwCardPlace, self.data.place))
+    {
+        var arr = Mahjong.GetChiCards(self.data.cards, card);
+        if (arr.length > 0) {
+            if(arr.length > 1) {
+                data['chi'] = arr;
+            }else {
+                data['chi'] = 1;
+            }
         }
     }
 
@@ -617,6 +654,43 @@ Player.prototype.SendJiangCards = function(player, card, self, throwCardPlace)
     return data;
 }
 
+Player.prototype.SendChiCards = function(player, card, self, throwCardPlace) {
+
+    var  toSelf = self.data.place === player.data.place;
+    var data = {    "place"             : player.data.place,
+                    "card"              : card,
+                    "chiCards"          : player.data.chiCards };
+
+    if (toSelf) {
+        data.cards = player.data.cards;
+        
+        // 是否杠牌
+        if (Mahjong.HasGangCardsByHand(self.data.cards)) {
+            data['gang'] = 1;
+        }
+        
+        if (Mahjong.HasKanCardsByHand(self.data.cards)) {
+            data['kan'] = 1;
+        }
+        
+        if (self.data.canNiu) {
+            data['niu'] = 1;
+        }
+    }else {
+        var cards = new Array(player.data.cards.length);
+        for (var i = 0; i < cards.length; ++i) {
+            cards[i] = 0;
+        }
+        data.cards = cards;
+    }
+
+    if (typeof throwCardPlace !== 'undefined') {
+        data.throwCardPlace = throwCardPlace;
+    }
+
+    return data;
+}
+
 Player.prototype.SendHuCards = function(player, card, self, throwCardPlace) 
 {
     var data = {    "place"             : player.data.place,
@@ -637,6 +711,10 @@ Player.prototype.SendHuCards = function(player, card, self, throwCardPlace)
     
     if (player.data.niuCards.length > 0) {
         data.niuCards = player.data.niuCards;
+    }
+
+    if (player.data.chiCards.length > 0) {
+        data.chiCards = player.data.chiCards;
     }
     
     if (player.data.jiangCards.length > 0) {
@@ -777,6 +855,9 @@ Player.prototype.SendPlayerInfoByReconnection = function(playerData, status, sel
     if (playerData.niuCards.length > 0) {
         data.niuCards = playerData.niuCards;     // 已牛的牌
     }
+    if (playerData.chiCards.length > 0) {
+        data.chiCards = playerData.chiCards;     // 已吃的牌
+    }
     if (playerData.jiangCards.length > 0) {
         data.jiangCards = playerData.jiangCards; // 已将的牌
     }
@@ -825,6 +906,10 @@ Player.prototype.SendAllCards = function(playerData)
     
     if (playerData.niuCards.length > 0) {
         data.niuCards = playerData.niuCards;
+    }
+
+    if (playerData.chiCards.length > 0) {
+        data.chiCards = playerData.chiCards;
     }
     
     if (playerData.jiangCards.length > 0) {

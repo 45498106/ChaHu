@@ -376,6 +376,28 @@ jiangCards['Process'] = function (data) {
 
 MessageHandler.Add(jiangCards);
 
+////////////////////////////////////////////////////////////////////////////////
+var chiCards = {};
+chiCards['interest'] = "chiCards";
+chiCards['Process'] = function (data) {
+    //GameLog(data);
+
+    var place = data.place;
+    var card = data.card;
+        
+    var player = GameData.players[place];
+        
+    player.cards = data.cards.slice();
+    player.cards.sort();
+    player.chiCards = data.chiCards.slice();
+    GameData.getCardPlace = place;
+   
+    // 通知
+    GameEvent().SendEvent('ChiCards', data);
+};
+
+MessageHandler.Add(chiCards);
+
 
 ////////////////////////////////////////////////////////////////////////////////
 var piaoCards = {};
@@ -426,6 +448,10 @@ huCards['Process'] = function (data) {
         player.jiangCards = data.jiangCards.slice();
     }
 
+    if (typeof data.chiCards !== 'undefined') {
+        player.chiCards = data.chiCards.slice();
+    }
+
     
     GameData.getCardPlace = -1;
     GameData.huPlace = place;
@@ -470,7 +496,7 @@ resumeGame['Process'] = function (data) {
         }
         return dst;
     }
-    
+
     //GameLog(data);
     
     var roomInfo = data.roomInfo;
@@ -520,6 +546,10 @@ resumeGame['Process'] = function (data) {
         
         if (typeof playerList[i].jiangCards !== 'undefined') {
             newPlayer.jiangCards = playData.jiangCards.slice();
+        }
+
+        if (typeof playerList[i].chiCards !== 'undefined') {
+            newPlayer.chiCards = playData.chiCards.slice();
         }
         
         if (typeof playerList[i].outputCards !== 'undefined') {
@@ -593,6 +623,10 @@ accounts['Process'] = function (datas) {
         
         if (typeof data.jiangCards !== 'undefined') {
             player.jiangCards = data.jiangCards.slice();
+        }
+
+        if (typeof data.chiCards !== 'undefined') {
+            player.chiCards = data.chiCards.slice();
         }
     }
     

@@ -7,15 +7,23 @@ var Mahjong = require("./Mahjong.js");
 var UserDB = require("./sql/userDB.js");
 var GameDB = require("./sql/gameDB.js");
 
+var Replay = require('./Replay');
+
 var MinuteToMicroSecond = 60000;
 
 var enum_Pass = 0;
 var enum_Niu = 1;
-var enum_Kan = 2;
-var enum_Jiang = 3;
-var enum_Peng = 4;
-var enum_Gang = 5;
-var enum_Hu = 6;
+var enum_Chi = 2;
+var enum_Kan = 3;
+var enum_Jiang = 4;
+var enum_Peng = 5;
+var enum_Gang = 6;
+var enum_Hu = 7;
+
+var enum_Rule_ZhuangXian = 1;
+var enum_Rule_Niu = enum_Rule_ZhuangXian << 1;
+var enum_Rule_Jiang = enum_Rule_ZhuangXian << 2;
+var enum_Rule_Chi = enum_Rule_ZhuangXian << 3;
 
 // 11-19 筒子
 // 21-29 万子
@@ -42,6 +50,7 @@ function PlayData()
     this.gangCards = new Array();   // 已杠的牌
     this.kanCards = new Array();    // 已砍的牌
     this.niuCards = new Array();    // 已牛的牌
+    this.chiCards = new Array();    // 已吃的牌
     this.jiangCards = new Array();  // 已将的牌
     this.huCards = new Array();     // 可胡的牌
     this.score = 0;                 // 单局分数
@@ -55,8 +64,10 @@ function PlayData()
     this.piaoCard = 0;
 }
 
-function Room()
+function Room(server)
 {
+    this.server = server;
+
     this.duration = 0;      // 持续时间
     this.players = [null, null, null, null]; // 玩家列表
     this.playData = null; // 游戏数据
@@ -85,20 +96,22 @@ Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playC
     me.id = id;
     me.roomName = "room:"+me.id;
     me.createUserId = createUserId;
-    me.ruleId = ruleId;
+    me.ruleId = ruleId | enum_Rule_Chi;     // 郯城麻将可以吃
     me.quanId = quanId;
     me.hunCount = hunCount;
     me.playCount = playCount;
     me.costMoney = costMoney;
     me.bankerCount = bankerCount;   // 庄记数
+
+    this.replay = new Replay(this);
 }
 
 Room.prototype.Shutdown = function() {
     var me = this;
     for (var i = 0; i < me.players.length; ++i) {
         if (me.players[i]) {
-            
-            if (typeof GameServer._robots[me.players[i].uniqueID] !== 'undefined') {
+            GameLog(typeof me.server.IsRobot);
+            if (me.server.IsRobot(me.players[i].uniqueID)) {
                 // 机器人不写数据库
             }else {
                 GameDB.UpdateRoomData(me.players[i].id, {});
@@ -107,12 +120,12 @@ Room.prototype.Shutdown = function() {
             me.RemovePlayer(me.players[i], false);
         }
     }
-    delete GameServer.rooms[me.id];
+    me.server.DeleteRoom(me.id);
 }
 
 Room.prototype.RuleHasZhuangXian = function() {
     var me = this;
-    if ((me.ruleId & 1) === 1) {
+    if ((me.ruleId & enum_Rule_ZhuangXian) === enum_Rule_ZhuangXian) {
         return true;
     }
     return false;
@@ -120,7 +133,7 @@ Room.prototype.RuleHasZhuangXian = function() {
 
 Room.prototype.RuleCanNiu = function() {
     var me = this;
-    if ((me.ruleId & 2) === 2) {
+    if ((me.ruleId & enum_Rule_Niu) === enum_Rule_Niu) {
         return true;
     }
     return false;
@@ -128,7 +141,15 @@ Room.prototype.RuleCanNiu = function() {
 
 Room.prototype.RuleCanJiang = function() {
     var me = this;
-    if ((me.ruleId & 4) === 4) {
+    if ((me.ruleId & enum_Rule_Jiang) === enum_Rule_Jiang) {
+        return true;
+    }
+    return false;
+}
+
+Room.prototype.RuleCanChi = function() {
+    var me = this;
+    if ((me.ruleId & enum_Rule_Chi) === enum_Rule_Chi) {
         return true;
     }
     return false;
@@ -290,7 +311,7 @@ Room.prototype.AddPlayer = function(player)
     var me = this;
 
     PROCESS_COCOS_SOCKETIO(player.socket, 'exitRoom', function (data) {
-        GameLog('exitRoom');
+        // GameLog('exitRoom');
         
         if (me.started) {
             GameLog("游戏已经开始,不能直接退出,只能发起总结算");
@@ -314,7 +335,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'reqDestoryRoom', function (data) {
-        GameLog('reqDestoryRoom');
+        // GameLog('reqDestoryRoom');
         
         if (me.started === false) {
             GameLog("游戏已经未开始,不用发起总结算");
@@ -341,7 +362,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'rspDestoryRoom', function (data) {
-        GameLog('reqDestoryRoom');
+        // GameLog('reqDestoryRoom');
         
         if (me.started === false) {
             GameLog("游戏已经未开始,不用发起总结算");
@@ -365,7 +386,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'ready', function (data) {
-        GameLog('ready');
+        // GameLog('ready');
         if (me.playing === true) { GameLog("不合法的消息请求"); return; }
         player.ready = true;
         me.BroadcastPlayers(null, "readyOk", player.place);
@@ -379,7 +400,7 @@ Room.prototype.AddPlayer = function(player)
     });
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'voice', function (data) {
-        GameLog('voice');
+        // GameLog('voice');
         me.BroadcastPlayers(null, "voiceBack", data);
     });
     
@@ -395,10 +416,14 @@ Room.prototype.AddPlayer = function(player)
                 me.lastThrowCard = card;
                 me.lastThrowPlace = player.data.place;
                 me.BroadcastPlayers2(player, "throwCard", card);
+
+                me.replay.AddAction('throwCard', player.place, card);
                 
                 if (typeof data.piao !== 'undefined' && player.data.piao === false && player.CanPiao()) {
                     player.data.piao = true;
                     me.BroadcastPlayers(player, "piaoCards", { place : player.data.place, card : me.lastThrowCard });
+
+                    me.replay.AddAction('throwCard', player.place, me.lastThrowCard);
                 }
                 
                 // 检测碰,杠,胡.
@@ -463,7 +488,7 @@ Room.prototype.AddPlayer = function(player)
     
     PROCESS_COCOS_SOCKETIO(player.socket, 'kanCards', function(data) {
         if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
-        GameLog("kanCards");
+        // GameLog("kanCards");
         var process = false;
         var checkEvent;
         for (var i = 0; i < me.checks.length; ++i) {
@@ -504,6 +529,25 @@ Room.prototype.AddPlayer = function(player)
             checkEvent = me.checks[i];
             if (checkEvent.place === player.data.place && typeof checkEvent.jiang !== 'undefined') {
                 checkEvent['select'] = enum_Jiang;
+                process = true;
+                break;
+            }
+        }
+        
+        if (process) me.ProcessCheck();
+    });
+
+    PROCESS_COCOS_SOCKETIO(player.socket, 'chiCards', function(data) {
+        if (me.playing === false || me.pause === true) { GameLog("不合法的消息请求"); return; }
+        if (me.RuleCanChi() === false) { GameLog("房间规则不能吃牌"); return; };
+        var process = false;
+        var checkEvent;
+        var kindIndex = data;
+        for (var i = 0; i < me.checks.length; ++i) {
+            checkEvent = me.checks[i];
+            if (checkEvent.place === player.data.place && typeof checkEvent.chi !== 'undefined') {
+                checkEvent['select'] = enum_Chi;
+                checkEvent['appendix'] = typeof kindIndex === 'number' ? kindIndex : 0;
                 process = true;
                 break;
             }
@@ -563,7 +607,7 @@ Room.prototype.AddPlayer = function(player)
         me.SendPlayerReady();
     }
    
-    GameLog(player.name + ' enter ' + me.roomName);
+    // GameLog(player.name + ' enter ' + me.roomName);
 }
 
 // 移除玩家
@@ -671,6 +715,8 @@ Room.prototype.BroadcastPlayers2 = function(who, action, argument, argument2)
             player.socket.emit(action, Player.prototype.SendAddNiuCard(who, argument, player));
         }else if(action === "jiangCards") {
             player.socket.emit(action, Player.prototype.SendJiangCards(who, argument, player, argument2));
+        }else if(action === "chiCards") {
+            player.socket.emit(action, Player.prototype.SendChiCards(who, argument, player, argument2));
         }
     }
 }
@@ -770,7 +816,7 @@ Room.prototype.FixCards = function() {
         }
     }
     
-    var fixCards = [32,32,32,11,11,11,22,22,23,23,24,24,31,34,26,45,46,47,26,27,28,28,28];
+    var fixCards = [11,11,11,12,13,14,15,16,17,18,19,19,19,34,26,45,46,47,26,27,28,28,28];
     var t;
     for (var i = 0; i < fixCards.length; ++i) {
         for (var j = i; j < this.cards.length; ++j) {
@@ -849,8 +895,12 @@ Room.prototype.NewGame = function()
         me.BroadcastPlayers2(player, "initCards");
     }
     
-    // 庄家先摸牌
     me.getCardPlace = me.bankerPlace;
+
+    // 录像开始
+    me.replay.Start();
+    
+    // 庄家先摸牌
     me.PlayerAddCard();
 }
 
@@ -888,6 +938,8 @@ Room.prototype.PlayerAddCard = function() {
         var card = me.cards[me.cardsIndex++];
         
         //GameLog("cardsIndex=", me.cardsIndex);
+
+        me.replay.AddAction('addCard', player.place, card);
 
         if (player.data.niuCards.length > 0 && 
            (card === 45 || card === 46 || card === 47))
@@ -944,7 +996,7 @@ Room.prototype.PlayerAddCard = function() {
             
             if (checkEvent !== null) {
                 me.checks.push(checkEvent);
-                GameLog("trigger checkEvent(add card)---------------->");
+                // GameLog("trigger checkEvent(add card)---------------->");
             }
             
             var remainNumber = (me.cards.length - 1) - me.cardsIndex;
@@ -959,6 +1011,16 @@ Room.prototype.ThrowCardCheck = function(player, card) {
     var otherPlayer;
     var huCards;
     var checkEvent = null;
+
+    function BIsANextPlace(placeA, placeB) {
+        var nextPlace = placeA + 1;
+        if (nextPlace === 4) { 
+            nextPlace = 0; 
+        }
+
+        return nextPlace === placeB;
+    }
+
     
     for (var i = 0; i < 4; ++i) {
         otherPlayer = me.players[i];
@@ -985,18 +1047,24 @@ Room.prototype.ThrowCardCheck = function(player, card) {
         
         // 将牌
         if (me.RuleCanJiang() && otherPlayer.data.piao === false) {
-            var nextPlace = player.data.place + 1;
-            if (nextPlace === 4) { 
-                nextPlace = 0; 
-            }
-            
-            if (otherPlayer.data.place === nextPlace && 
+            if (BIsANextPlace(player.data.place, otherPlayer.data.place) &&
                 otherPlayer.CanJiangCards(card)) {
                 if (checkEvent === null) {
                     checkEvent = { 'place' : otherPlayer.data.place, 'throwCheck' : 1};
                 }
                 checkEvent.jiang = 1;
             }
+        }
+
+        // 吃牌
+        if (me.RuleCanChi() &&
+            BIsANextPlace(player.data.place, otherPlayer.data.place) &&
+            Mahjong.CanChiCards(otherPlayer.data.cards, card))
+        {
+            if (checkEvent === null) {
+                checkEvent = { 'place' : otherPlayer.data.place, 'throwCheck' : 1};
+            }
+            checkEvent.chi = 1;
         }
         
         huCards = otherPlayer.GetHuCards();
@@ -1012,7 +1080,7 @@ Room.prototype.ThrowCardCheck = function(player, card) {
         
         if (checkEvent !== null) {
             me.checks.push(checkEvent);
-            GameLog("trigger checkEvent(throw card)---------------->");
+            // GameLog("trigger checkEvent(throw card)---------------->");
         }
     }
     
@@ -1046,8 +1114,8 @@ function RuleSort(room) {
 }
 
 // 处理客户端检测事件
-Room.prototype.ProcessEvent = function(place, select, selfCheck) {
-    GameLog("---------------->ProcessCheck:" + select);
+Room.prototype.ProcessEvent = function(place, select, selfCheck, appendix) {
+    // GameLog("---------------->ProcessCheck:" + select);
     var me = this;
     var player = me.players[place];
     switch(select) {
@@ -1062,22 +1130,19 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
             // 通知
             if (selfCheck) {
                 me.BroadcastPlayers2(player, "huCards", me.cards[me.cardsIndex - 1]);
+
+                me.replay.AddAction('huCards', player.place, me.cards[me.cardsIndex - 1]);
             }else {
                 me.BroadcastPlayers2(player, "huCards", me.lastThrowCard, me.lastThrowPlace);
+
+                me.replay.AddAction('huCards', player.place, { card : me.lastThrowCard, throwPlace : me.lastThrowPlace});
             }
+
             var huEnd = 2;
             me.GameEnd(huEnd);
         }break;
         case enum_Gang: {
-            if (selfCheck) {
-                player.GangCards(me.cards[me.cardsIndex - 1], true);
-                me.BroadcastPlayers2(player, "gangCards", me.cards[me.cardsIndex - 1]);
-            }else {
-                player.GangCards(me.lastThrowCard, false);
-                me.BroadcastPlayers2(player, "gangCards", me.lastThrowCard, me.lastThrowPlace);
-            }
-            me.getCardPlace = player.data.place;
-            me.PlayerAddCard();
+            me.PlayerGangCards(player, selfCheck);
             me.RemoveLastOneInPlayerOutputCards();
         }break;
         case enum_Peng: {
@@ -1093,6 +1158,11 @@ Room.prototype.ProcessEvent = function(place, select, selfCheck) {
         case enum_Jiang : {
             me.PlayerJiangCards(player);
             me.RemoveLastOneInPlayerOutputCards();
+        }break;
+        case enum_Chi : {
+            if(me.PlayerChiCard(player, appendix)) {
+                me.RemoveLastOneInPlayerOutputCards();
+            }
         }break;
         case enum_Pass: {
             if (selfCheck === false) {
@@ -1131,6 +1201,9 @@ Room.prototype.ProcessCheck = function() {
 
         if (typeof checkEvent.jiang !== 'undefined') 
             return enum_Jiang;
+        
+        if (typeof checkEvent.chi !== 'undefined')
+            return enum_Chi;
 
         if (typeof checkEvent.kan !== 'undefined') 
             return enum_Kan;
@@ -1163,10 +1236,11 @@ Room.prototype.ProcessCheck = function() {
                     var select = checkEvent.select;
                     var place = checkEvent.place;
                     var selfCheck = typeof checkEvent.selfCheck !== 'undefined'
+                    var appendix = checkEvent.appendix;
                     // 清除事件
                     me.checks.splice(0, me.checks.length);
                     // 处理事件
-                    me.ProcessEvent(place, select, selfCheck);
+                    me.ProcessEvent(place, select, selfCheck, appendix);
                 }
                 break;
             }
@@ -1209,21 +1283,25 @@ Room.prototype.TriggerSelfCheck = function(player)
     
     if (checkEvent !== null) {
         this.checks.push(checkEvent);
-        GameLog("trigger checkEvent(self check)---------------->");
+        //GameLog("trigger checkEvent(self check)---------------->");
     }
 }
 
 // 玩家杠牌
-Room.prototype.PlayerGangCards = function (player) {
+Room.prototype.PlayerGangCards = function (player, selfCheck) {
     var me = this;
-    // 玩家杠牌
-    player.PengCards(me.lastThrowCard);
-    // 触发检测
-    me.TriggerSelfCheck(player);
-    // 通知
-    me.BroadcastPlayers2(player, "pengCards", me.lastThrowCard, me.lastThrowPlace);
-    // 改变出牌位置
+
+    if (selfCheck) {
+        player.GangCards(me.cards[me.cardsIndex - 1], true);
+        me.BroadcastPlayers2(player, "gangCards", me.cards[me.cardsIndex - 1]);
+    }else {
+        player.GangCards(me.lastThrowCard, false);
+        me.BroadcastPlayers2(player, "gangCards", me.lastThrowCard, me.lastThrowPlace);
+    }
     me.getCardPlace = player.data.place;
+    me.PlayerAddCard();
+
+    me.replay.AddAction('gangCards', player.place, { card : me.lastThrowCard, throwPlace : me.lastThrowPlace} );
 }
 
 // 玩家碰牌
@@ -1237,6 +1315,8 @@ Room.prototype.PlayerPengCards = function (player) {
     me.BroadcastPlayers2(player, "pengCards", me.lastThrowCard, me.lastThrowPlace);
     // 改变出牌位置
     me.getCardPlace = player.data.place;
+
+    me.replay.AddAction('pengCards', player.place, { card : me.lastThrowCard, throwPlace : me.lastThrowPlace} );
 }
 
 // 玩家将牌
@@ -1250,17 +1330,42 @@ Room.prototype.PlayerJiangCards = function (player) {
     me.BroadcastPlayers2(player, "jiangCards", me.lastThrowCard, me.lastThrowPlace);
     // 改变出牌位置
     me.getCardPlace = player.data.place;
+
+    me.replay.AddAction('jiangCards', player.place, { card : me.lastThrowCard, throwPlace : me.lastThrowPlace} );
+}
+
+// 玩家吃牌
+Room.prototype.PlayerChiCard = function(player, kindIndex) {
+    var me = this;
+    var arr = Mahjong.GetChiCards(player.data.cards, me.lastThrowCard);
+    if (arr.length <= kindIndex) {
+        return false;
+    }
+    // 玩家吃牌
+    player.AddChiCard(me.lastThrowCard, arr[kindIndex]);
+    // 触发检测
+    me.TriggerSelfCheck(player);
+    // 通知
+    me.BroadcastPlayers2(player, "chiCards", me.lastThrowCard, me.lastThrowPlace);
+    // 改变出牌位置
+    me.getCardPlace = player.data.place;
+
+    me.replay.AddAction('chiCards', player.place, { card : me.lastThrowCard, throwPlace : me.lastThrowPlace});
+
+    return true;
 }
 
 // 玩家坎牌
 Room.prototype.PlayerKanCards = function (player) {
     var me = this;
     // 玩家坎牌
-    player.KanCards();
+    var card = player.KanCards();
     // 触发检测
     me.TriggerSelfCheck(player);
     // 通知
     me.BroadcastPlayers2(player, "kanCards");
+
+    me.replay.AddAction('kanCards', player.place, card);
 }
 
 // 玩家牛牌
@@ -1286,6 +1391,8 @@ Room.prototype.PlayerNiuCards = function (player) {
     me.TriggerSelfCheck(player);
     // 通知
     me.BroadcastPlayers2(player, "niuCards", addCards);
+
+    me.replay.AddAction('niuCards', player.place, addCards);
 }
 
 // 移除玩家上次打出的牌
@@ -1465,6 +1572,10 @@ Room.prototype.CalcBaoCard = function(winnerPlace, selfHu) {
 // 单局结束
 Room.prototype.GameEnd = function(status) {
     var me = this;
+
+    // 录像结束
+    me.replay.End();
+
     me.state = 3; // 结算状态
     me.playing = false;
     ++me.playCount;

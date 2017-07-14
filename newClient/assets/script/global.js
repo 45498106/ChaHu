@@ -25,7 +25,6 @@ if (!cc.sys.isNative) {
     cc.loader.load("http://" + window.GameHost+':' + window.GamePort + '/socket.io/socket.io.js', 
         function (err, tex) {
             if (err) {
-                
                 alert("无法连接服务器,请检查网络是否正常!");
                 return;
             }
@@ -159,24 +158,23 @@ window.SetSpriteImage = function(sprite, url, localRes) {
             }
         }(nowTime, sprite));
     }
-    else {
-        /*
-        if (!cc.sys.isNative) {
-            var img = new Image();
-            img.src = typeof url === 'object' ? url.url : url;
-            img.onload = function(nowTime, sprite) {
-                return function() {
-                    GameLog(sprite.lastSetSpriteImageTime.getTime(), nowTime.getTime());
-                    if (sprite.lastSetSpriteImageTime > nowTime) { return }
-                    var texture = new cc.Texture2D();
-                    texture.generateMipmaps = false;
-                    texture.initWithElement(img);
-                    texture.handleLoadedTexture();
-                    var newFrame = new cc.SpriteFrame(texture);
-                    sprite.spriteFrame = newFrame;
-                }
-            }(nowTime, sprite);
-        }else {*/
+    else {        
+        // if (!cc.sys.isNative) {
+        //     var img = new Image();
+        //     img.src = typeof url === 'object' ? url.url : url;
+        //     img.onload = function(nowTime, sprite) {
+        //         return function() {
+        //             GameLog(sprite.lastSetSpriteImageTime.getTime(), nowTime.getTime());
+        //             if (sprite.lastSetSpriteImageTime > nowTime) { return }
+        //             var texture = new cc.Texture2D();
+        //             texture.generateMipmaps = false;
+        //             texture.initWithElement(img);
+        //             texture.handleLoadedTexture();
+        //             var newFrame = new cc.SpriteFrame(texture);
+        //             sprite.spriteFrame = newFrame;
+        //         }
+        //     }(nowTime, sprite);
+        // }else {
             cc.loader.load(url, function(nowTime, sprite) {
                 return function (err, tex) {
                     if (sprite.lastSetSpriteImageTime > nowTime) { return }
@@ -192,7 +190,7 @@ window.SetSpriteImage = function(sprite, url, localRes) {
                     }
                 }
             }(nowTime, sprite));
-        //}
+        // }
     }
 }
 

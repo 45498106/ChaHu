@@ -311,7 +311,7 @@ function PassOperation(socket, data) {
     if (typeof data.jiang !== 'undefined' || typeof data.niu !== 'undefined' ||
         typeof data.kan !== 'undefined' || typeof data.peng !== 'undefined' ||
         typeof data.gang !== 'undefined' || typeof data.hu !== 'undefined' ||
-        typeof data.zha !== 'undefined')
+        typeof data.zha !== 'undefined' || typeof data.chi !== 'undefined')
     {
         GameLog('passCards');
         socket.emit('passCards');

@@ -313,7 +313,6 @@ WebWeiXin.prototype.InviteFriend = function() {
                                             '规则:' + rule + '\n圈数:' + quan + '圈\n荤底:' + hundi, 
                                             'http://download.xychahu.com/index.html?scheme=xinyichahu&roomid='+roomid);
         }
-        //jsb.reflection.callStaticMethod("AppController", 'shareWithWeixinFriendTxt:txt:url:', '查虎麻将[房号:'+roomid+']', '规则:xxx yyy zzz/n圈数:n圈/荤底:20', 'http://download.xychahu.com/index.html?scheme=xiyichahu&roomid='+roomid);
     }
 }
 

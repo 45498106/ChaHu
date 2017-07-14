@@ -120,8 +120,12 @@ cc.Class({
         readyBtn : cc.Button,
         countiuBtn : cc.Button,
         
+        layout_v : cc.Prefab,
+        layout_vReplay : cc.Prefab,
         gap : cc.Prefab,
         gap_v : cc.Prefab,
+        gap_vx : cc.Prefab,
+        gap_vl : cc.Prefab,
         gap_u : cc.Prefab,
         selfCardPrefab : cc.Prefab,
         cardPrefab : cc.Prefab,
@@ -168,6 +172,7 @@ cc.Class({
         opBtnJiang : cc.Button,
         opBtnKan : cc.Button,
         opBtnNiu : cc.Button,
+        opBtnChi : cc.Button,
         
         operation2Pnl : cc.Node,
         opBtnGuo2 : cc.Button,
@@ -195,7 +200,6 @@ cc.Class({
         timeLabel : cc.Label,
         secondLabel : cc.Label,
         
-        
         animHu : cc.Node,
         huArrow : cc.Node,
         animLiuJu : cc.Node,
@@ -204,6 +208,7 @@ cc.Class({
         piaoArrow : cc.Node,
         
         tingCardsNotify : cc.Node,
+        chiSelectPnl : cc.Node, 
         
         voiceMonitor : cc.Node,
         voiceVolumeSpr : cc.Sprite,
@@ -229,6 +234,7 @@ cc.Class({
         this.opBtnJiang.node.on('click', this.OnOpJiang, this);
         this.opBtnKan.node.on('click', this.OnOpKan, this);
         this.opBtnNiu.node.on('click', this.OnOpNiu, this);
+        this.opBtnChi.node.on('click', this.OnOpChi, this);
         this.opBtnGuo2.node.on('click', this.OnOpGuo2, this);
         this.opBtnPiao.node.on('click', this.OnOpPiao, this);
         this.opBtnXi.node.on('click', this.OnOpXi, this);
@@ -250,6 +256,7 @@ cc.Class({
         GameEvent().OnEvent('KanCards', this.OnKanCards, this);
         GameEvent().OnEvent('NiuCards', this.OnNiuCards, this);
         GameEvent().OnEvent('JiangCards', this.OnJiangCards, this);
+        GameEvent().OnEvent('ChiCards', this.OnChiCards, this);
         GameEvent().OnEvent('PiaoCards', this.OnPiaoCards, this);
         GameEvent().OnEvent('HuCards', this.OnHuCards, this);
         GameEvent().OnEvent('Accounts', this.OnAccounts, this);
@@ -257,6 +264,7 @@ cc.Class({
         GameEvent().OnEvent('CloseTotalAccuoutsPanel', this.OnCloseTotalAccounts, this);
         GameEvent().OnEvent('VoiceBack', this.OnVoiceBack, this);
         GameEvent().OnEvent('DestoryRoomBack', this.OnDestoryRoomBack, this);
+        GameEvent().OnEvent('ChiSelected', this.OnChiSelected, this);
         
         GameEvent().OnEvent("reconnectedServer", this.OnReconnectedServer, this);
         GameEvent().OnEvent("ReconnectBack", this.OnReconnectBack, this);
@@ -264,15 +272,23 @@ cc.Class({
         // 播放声音
         var audioMng = AudioMng();
         if (audioMng) audioMng.playGameMusic();
-       
 
-        if (GameData.userRoomData.played === 0) {
-            this.PrepareShow();
-        }else if (GameData.userRoomData.played === 1) {
+        if (Replay.IsReplayMode()) {
+            // 重拨模式
             this.PlayingShow();
-            if (GameData.resumeGame === true) {
-                this.ResumeGame();
-                GameData.resumeGame === false;
+            this.replayDt = 0;
+            this.setpInterval = 0;
+        }
+        else {
+            // 游戏模式
+            if (GameData.userRoomData.played === 0) {
+                this.PrepareShow();
+            }else if (GameData.userRoomData.played === 1) {
+                this.PlayingShow();
+                if (GameData.resumeGame === true) {
+                    this.ResumeGame();
+                    GameData.resumeGame === false;
+                }
             }
         }
         
@@ -285,7 +301,7 @@ cc.Class({
     InitVoice : function() {
         
         if (!cc.sys.isNative) {
-            this.voiceBtn.node.active = false;
+            //this.voiceBtn.node.active = false;
             return;
         }
         
@@ -576,6 +592,16 @@ cc.Class({
         
         this.SetTitleInfo();
     },
+
+    SureChiArray : function(data) {
+        if (typeof data.chi !== 'undefined') {
+            if (typeof data.chi === 'object' && data.chi instanceof Array) {
+                this.chiArray = data.chi.slice();
+            }
+        }else {
+            this.chiArray = null;
+        }
+    },
     
     ResumeGame : function() {
         var player, throwFunc, place;
@@ -589,8 +615,8 @@ cc.Class({
                 Util.ArrayRemoveElemnt(player.cards, card);
                 player.cards.sort();
                 
-                this.SelfInitCards(player.cards, player.pengCards, player.gangCards, 
-                                   player.kanCards, player.niuCards, player.jiangCards);
+                this.SelfInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, 
+                                   player.niuCards, player.jiangCards, player.chiCards);
             
                 player.cards.push(card);
                 this.SelfAddCard(card, player.cards.length - 1);
@@ -619,12 +645,8 @@ cc.Class({
             
             if (player.id === GameData.userId ) {
                 
-                
-                this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
-                        
+                this.ShowOperatEx(data);
+                this.SureChiArray(data);
                 GameData.selfOperation = null;
             }
         }
@@ -932,16 +954,16 @@ cc.Class({
         var player = GameData.players[place];
         if (IsFrontPlayer(place)) {
             this.FrontInitCards(player.cards, player.pengCards, player.gangCards, 
-                player.kanCards, player.niuCards, player.jiangCards);
+                player.kanCards, player.niuCards, player.jiangCards, player.chiCards);
         }else if (IsBackPlayer(place)) {
             this.BackInitCards(player.cards, player.pengCards, player.gangCards, 
-                player.kanCards, player.niuCards, player.jiangCards);
+                player.kanCards, player.niuCards, player.jiangCards, player.chiCards);
         }else if (IsOppositePlayer(place)) {
             this.OppositeInitCards(player.cards, player.pengCards, player.gangCards, 
-                player.kanCards, player.niuCards, player.jiangCards);
+                player.kanCards, player.niuCards, player.jiangCards, player.chiCards);
         }else {
             this.SelfInitCards(player.cards, player.pengCards, player.gangCards, 
-                player.kanCards, player.niuCards, player.jiangCards);
+                player.kanCards, player.niuCards, player.jiangCards, player.chiCards);
         }
     },
     
@@ -985,10 +1007,7 @@ cc.Class({
             }
         }
         
-        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
+        this.ShowOperatEx(data);
         
         // 播放倒计时
         this.PlayCountDown();
@@ -1036,24 +1055,26 @@ cc.Class({
         var player = GameData.players[place];
         
         if (IsFrontPlayer(place)) {
-            this.FrontInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+            this.FrontInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards,
+                                player.niuCards, player.jiangCards, player.chiCards);
             this.FrontThrowCard(card);
         }else if (IsBackPlayer(place)) {
-            this.BackInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+            this.BackInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards,
+                               player.niuCards, player.jiangCards, player.chiCards);
             this.BackThrowCard(card);
         }else if (IsOppositePlayer(place)){
-            this.OppositeInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+            this.OppositeInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards,
+                                   player.niuCards, player.jiangCards, player.chiCards);
             this.OppositeThrowCard(card);
         }else {
-            this.SelfInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+            this.SelfInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards,
+                               player.niuCards, player.jiangCards, player.chiCards);
             this.SelfThrowCard(card);
         }
         
-        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
-                        
+        this.ShowOperatEx(data);
+        this.SureChiArray(data);
+
         this.ShowOperat2(typeof data.xi !== 'undefined', typeof data.piao !== 'undefined');
         
         
@@ -1082,7 +1103,7 @@ cc.Class({
         }else {
             this.tingCardsNotify.active = false;
         }
-    
+
         // 播放声音
         var audioMng = AudioMng();
         if (audioMng) audioMng.playCard(card);
@@ -1104,10 +1125,7 @@ cc.Class({
             this.DelLastThrowCardByPlace(data.throwCardPlace);
         }
         
-        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
+        this.ShowOperatEx(data);
         
         this.SetDongInfo(place);
         
@@ -1134,13 +1152,8 @@ cc.Class({
         if (typeof data.throwCardPlace !== 'undefined') {
             this.DelLastThrowCardByPlace(data.throwCardPlace);
         }
-        
 
-        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
-        
+        this.ShowOperatEx(data);
 
         // 播放声音
         var audioMng = AudioMng();
@@ -1155,10 +1168,7 @@ cc.Class({
         var player = GameData.players[place];
         this.InitPlayerCards(place, player);
         
-        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
+        this.ShowOperatEx(data);
         
         // 播放声音
         var audioMng = AudioMng();
@@ -1173,10 +1183,7 @@ cc.Class({
         var player = GameData.players[place];
         this.InitPlayerCards(place, player);
         
-        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
+        this.ShowOperatEx(data);
 
         // 播放声音
         var audioMng = AudioMng();
@@ -1195,14 +1202,28 @@ cc.Class({
             this.DelLastThrowCardByPlace(data.throwCardPlace);
         }
         
-        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
+        this.ShowOperatEx(data);
 
         // 播放声音
         var audioMng = AudioMng();
         if (audioMng) audioMng.playJiang();
+    },
+
+    OnChiCards : function(event) {
+        var data = event.detail;
+        var place = data.place;
+        
+        var player = GameData.players[place];
+        this.InitPlayerCards(place, player);
+
+        if (typeof data.throwCardPlace !== 'undefined') {
+            this.DelLastThrowCardByPlace(data.throwCardPlace);
+        }
+
+        this.ShowOperatEx(data);
+        // 播放声音
+        var audioMng = AudioMng();
+        if (audioMng) audioMng.playChi();
     },
     
     OnPiaoCards : function(event) {
@@ -1227,10 +1248,7 @@ cc.Class({
         var player = GameData.players[place];
         this.InitPlayerCards(place, player);
 
-        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
-                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
-                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
-                        typeof data.zha !== 'undefined');
+        this.ShowOperatEx(data);
     
         // 播放声音
         var audioMng = AudioMng();
@@ -1289,13 +1307,19 @@ cc.Class({
         script.OnShow(false);
         script.Reload(data);
     },
+
+    OnChiSelected : function(event) {
+        var selectIdx = event.detail;
+        this.chiSelectPnl.getComponent('chiSelect').OnHide();
+        GameSocket().Send('chiCards', selectIdx);
+    },
     
     OnOpGuo : function() {
         GameSocket().Send('passCards');
-        this.ShowOperat(false, false, 
-                        false, false, 
+        this.ShowOperat(false, false,
                         false, false,
-                        false);
+                        false, false,
+                        false, false);
     },
     
     OnOpZha : function() {
@@ -1326,6 +1350,15 @@ cc.Class({
     
     OnOpNiu : function() {
         GameSocket().Send('niuCards');
+    },
+
+    OnOpChi : function() {
+        if (this.chiArray === null) {
+            GameSocket().Send('chiCards');
+        } else {
+            // 显示吃牌选择
+            this.chiSelectPnl.getComponent('chiSelect').OnShow(this.chiArray);
+        }
     },
     
     OnOpGuo2 : function() {
@@ -1362,7 +1395,8 @@ cc.Class({
             Util.ArrayRemoveElemnt(tempCards, card);
             if (player.piao === false && CanPiao(tempCards)) {
                 this.ShowOperat2(false, true);
-                this.SelfInitCards(tempCards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+                this.SelfInitCards(tempCards, player.pengCards, player.gangCards, player.kanCards,
+                                   player.niuCards, player.jiangCards, player.chiCards);
                 this.SelfThrowCard(card);
                 this.piaoThrowCard = card;
             }
@@ -1395,12 +1429,12 @@ cc.Class({
         for (i = 0; i < children.length; ++i) {
             children[i].opacity = 0;
         }
-    },
+    }, 
     
-    ShowOperat : function(jiang, niu, kan, peng, gang, hu, zha) {
+    ShowOperat : function(jiang, niu, kan, peng, gang, hu, zha, chi) {
         
         if (jiang === false && niu === false && kan === false && peng === false  && 
-            gang === false && hu === false && zha === false) {
+            gang === false && hu === false && zha === false && chi === false) {
             this.HiddenOperat();
             return;
         }
@@ -1419,7 +1453,12 @@ cc.Class({
             this.opBtnNiu.node.active = true;
         else
             this.opBtnNiu.node.active = false;
-            
+
+        if (chi)
+            this.opBtnChi.node.active = true;
+        else
+            this.opBtnChi.node.active = false;
+    
         if (kan) 
             this.opBtnKan.node.active = true;
         else
@@ -1444,6 +1483,13 @@ cc.Class({
             this.opBtnZha.node.active = true;
         else
             this.opBtnZha.node.active = false;
+    },
+
+    ShowOperatEx : function(data) {
+        this.ShowOperat(typeof data.jiang !== 'undefined', typeof data.niu !== 'undefined', 
+                        typeof data.kan !== 'undefined', typeof data.peng !== 'undefined', 
+                        typeof data.gang !== 'undefined', typeof data.hu !== 'undefined',
+                        typeof data.zha !== 'undefined', typeof data.chi !== 'undefined');
     },
     
     HiddenOperat : function() {
@@ -1477,7 +1523,7 @@ cc.Class({
     },
     
     InitSpecialCards : function(hand, cardDir, gapPrefab, pengPrefab, gangPrefab,
-        jiangPrefab, pengCards, gangCards, kanCards, niuCards, jiangCards) 
+        jiangPrefab, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) 
     {
         var k,c;
         for (k = 0; niuCards && k < niuCards.length; k+=3) {
@@ -1529,6 +1575,18 @@ cc.Class({
             hand.addChild(inst);
             hand.addChild(cc.instantiate(gapPrefab));
         }
+
+        for (k = 0; chiCards && k < chiCards.length; k+=3) {
+            var inst = cc.instantiate(pengPrefab);
+            var children = inst.children;
+            for (c = 0; c < children.length; c++) {
+                var spr = children[c].getComponent(cc.Sprite);
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][chiCards[k+c]];
+            }
+            
+            hand.addChild(inst);
+            hand.addChild(cc.instantiate(gapPrefab));
+        }
  
         for (k = 0; jiangCards && k < jiangCards.length; k+=2) {
             var inst = cc.instantiate(jiangPrefab);
@@ -1544,7 +1602,7 @@ cc.Class({
     },
     
     InitSpecialCardsForBack : function(hand, cardDir, gapPrefab, pengPrefab, gangPrefab,
-        jiangPrefab, pengCards, gangCards, kanCards, niuCards, jiangCards) 
+        jiangPrefab, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) 
     {
         var k,c;
         for (k = 0; niuCards && k < niuCards.length; k+=3) {
@@ -1592,6 +1650,18 @@ cc.Class({
             hand.addChild(inst, -hand.children.length);
             hand.addChild(cc.instantiate(gapPrefab), -hand.children.length);
         }
+
+        for (k = 0; chiCards && k < chiCards.length; k+=3) {
+            var inst = cc.instantiate(pengPrefab);
+            var children = inst.children;
+            for (c = 0; c < children.length; c++) {
+                var spr = children[c].getComponent(cc.Sprite);
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][chiCards[k+c]];
+            }
+            
+            hand.addChild(inst);
+            hand.addChild(cc.instantiate(gapPrefab));
+        }
  
         for (k = 0; jiangCards && k < jiangCards.length; k+=2) {
             var inst = cc.instantiate(jiangPrefab);
@@ -1608,13 +1678,17 @@ cc.Class({
     
     InitPlayerCards : function(place, player) {
         if (IsFrontPlayer(place)) {
-            this.FrontInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+            this.FrontInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, 
+                                player.niuCards, player.jiangCards, player.chiCards);
         }else if (IsBackPlayer(place)) {
-            this.BackInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+            this.BackInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, 
+                               player.niuCards, player.jiangCards, player.chiCards);
         }else if (IsOppositePlayer(place)){
-            this.OppositeInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+            this.OppositeInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards,
+                                   player.niuCards, player.jiangCards, player.chiCards);
         }else {
-            this.SelfInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards, player.niuCards, player.jiangCards);
+            this.SelfInitCards(player.cards, player.pengCards, player.gangCards, player.kanCards,
+                               player.niuCards, player.jiangCards, player.chiCards);
         }
     },
     
@@ -1640,16 +1714,30 @@ cc.Class({
                 this.selectThrowCard.clickCount = undefined;
             }
             this.selectThrowCard = cardSpr;
+            //-------超时1秒,再点收回-----------
             //cardSpr.scheduleOnce(function(){
             //    this.clickCount = -1;  
             //},1);
+            //-------超时1秒,再点收回-----------
         }
+        //-------超时1秒,再点收回-----------
         //else if (cardSpr.clickCount === -1) {
         //    cardSpr.clickCount = undefined;
         //    cardSpr.node.y = 0;
         //    this.selectThrowCard = null;
         //}
+        //-------超时1秒,再点收回-----------
+         
         else {
+
+            //-------未到自己出牌,二次点击收回-----------
+            //if (GameData.selfPlace !== GameData.getCardPlace) {
+            //    cardSpr.clickCount = undefined;
+            //    cardSpr.node.y = 0;
+            //    this.selectThrowCard = null;
+            //}
+            //-------未到自己出牌,二次点击收回-----------
+
             this.NeedThrowCards(cardSpr.node.cardIndex);
         }
         
@@ -1658,14 +1746,14 @@ cc.Class({
     },
 
     // 初始自己的手牌
-    SelfInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
+    SelfInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) {
         this.selfHand.removeAllChildren();
     
         // 添加特殊牌
         this.InitSpecialCards(this.selfHand, 4, this.gap, 
                               this.pengPrefab, this.gangPrefab,
                               this.jiangPrefab, pengCards, gangCards, 
-                              kanCards, niuCards, jiangCards);
+                              kanCards, niuCards, jiangCards, chiCards);
         
         // 添加手牌
         this.selectThrowCard = null;
@@ -1721,14 +1809,21 @@ cc.Class({
     },
 
     // 初始上家的手牌
-    FrontInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
+    FrontInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) {
         this.frontHand.removeAllChildren();
         
         // 添加特殊牌
         this.InitSpecialCards(this.frontHand, 0, this.gap_v, 
                               this.frontPengPrefab, this.frontGangPrefab,
                               this.frontJiangPrefab, pengCards, gangCards, 
-                              kanCards, niuCards, jiangCards);
+                              kanCards, niuCards, jiangCards, chiCards);
+        
+        if  (Replay.IsReplayMode()) {
+            this.frontHand.layout_v = cc.instantiate(this.layout_vReplay);
+        }else {
+            this.frontHand.layout_v = cc.instantiate(this.layout_v);
+        }
+        this.frontHand.addChild(this.frontHand.layout_v);
 
         // 添加手牌
         var inst, spr;
@@ -1736,19 +1831,23 @@ cc.Class({
             inst = cc.instantiate(this.cardPrefab);
             spr = inst.getComponent(cc.Sprite);
             spr.spriteFrame = CardSpriteFrameCache[0][cards[i]];
-            this.frontHand.addChild(inst);
+            this.frontHand.layout_v.addChild(inst);
+            this.frontHand.layout_v.getComponent(cc.Layout)._updateLayout();
+            this.frontHand.getComponent(cc.Layout)._updateLayout();
         }
     },
     
     // 上家模牌
     FrontAddCard : function(card) {
-        var gap = cc.instantiate(this.gap_v);
+        var gap = Replay.IsReplayMode() ? cc.instantiate(this.gap_vl) : cc.instantiate(this.gap_vx);
         var cardInst = cc.instantiate(this.cardPrefab);
         var spr = cardInst.getComponent(cc.Sprite);
         spr.spriteFrame = CardSpriteFrameCache[0][card];
             
-        this.frontHand.addChild(gap);
-        this.frontHand.addChild(cardInst);
+        this.frontHand.layout_v.addChild(gap);
+        this.frontHand.layout_v.addChild(cardInst);
+        this.frontHand.layout_v.getComponent(cc.Layout)._updateLayout();
+        this.frontHand.getComponent(cc.Layout)._updateLayout();
     },
     
     // 上家出牌
@@ -1775,7 +1874,7 @@ cc.Class({
     },
     
     // 初始下家的手牌
-    BackInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
+    BackInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) {
         this.backHand.removeAllChildren();
         
 
@@ -1783,27 +1882,39 @@ cc.Class({
         this.InitSpecialCardsForBack(this.backHand, 2, this.gap_v, 
                               this.backPengPrefab, this.backGangPrefab,
                               this.backJiangPrefab, pengCards, gangCards, 
-                              kanCards, niuCards, jiangCards);
-                              
+                              kanCards, niuCards, jiangCards, chiCards);
+        
+        if  (Replay.IsReplayMode()) {
+            this.backHand.layout_v = cc.instantiate(this.layout_vReplay);
+        }else {
+            this.backHand.layout_v = cc.instantiate(this.layout_v);
+        }
+        this.backHand.addChild(this.backHand.layout_v);
+
         // 添加手牌
         var inst, spr;
         for (var i = 0; i < cards.length; ++i) {
             inst = cc.instantiate(this.cardPrefab);
             spr = inst.getComponent(cc.Sprite);
             spr.spriteFrame = CardSpriteFrameCache[2][cards[i]];
-            this.backHand.addChild(inst, -this.backHand.children.length);
+            this.backHand.layout_v.addChild(inst, -this.backHand.layout_v.children.length);
+            this.backHand.layout_v.getComponent(cc.Layout)._updateLayout();
+            this.backHand.getComponent(cc.Layout)._updateLayout();
         }
     },
     
     // 下家模牌
     BackAddCard : function(card) {
-        var gap = cc.instantiate(this.gap_v);
+        var gap = Replay.IsReplayMode() ? cc.instantiate(this.gap_vl) : cc.instantiate(this.gap_vx);
         var cardInst = cc.instantiate(this.cardPrefab);
         var spr = cardInst.getComponent(cc.Sprite);
         spr.spriteFrame = CardSpriteFrameCache[2][card];
             
-        this.backHand.addChild(gap, -this.backHand.children.length);
-        this.backHand.addChild(cardInst, -this.backHand.children.length);
+        this.backHand.layout_v.addChild(gap, -this.backHand.layout_v.children.length);
+        this.backHand.layout_v.addChild(cardInst, -this.backHand.layout_v.children.length);
+
+        this.backHand.layout_v.getComponent(cc.Layout)._updateLayout();
+        this.backHand.getComponent(cc.Layout)._updateLayout();
     },
     
     // 下家出牌
@@ -1830,14 +1941,14 @@ cc.Class({
     },
     
     // 初始对家的手牌
-    OppositeInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards) {
+    OppositeInitCards : function(cards, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) {
         this.oppositeHand.removeAllChildren();
         
         // 添加特殊牌
         this.InitSpecialCards(this.oppositeHand, 3, this.gap_u, 
                               this.upPengPrefab, this.upGangPrefab,
                               this.upJiangPrefab, pengCards, gangCards, 
-                              kanCards, niuCards, jiangCards);
+                              kanCards, niuCards, jiangCards, chiCards);
         
         // 添加手牌
         var inst, spr;
@@ -1942,5 +2053,16 @@ cc.Class({
     // called every frame, uncomment this function to activate update callback
     update: function (dt) {
         this.voicePoll();
+        
+        var pause = false;
+        if (Replay.IsReplayMode() && !pause) {
+            
+            this.replayDt += dt;
+
+            if (this.replayDt > this.setpInterval) {
+                this.setpInterval = Replay.Step();
+                this.replayDt = 0;
+            }
+        }
     },
 });

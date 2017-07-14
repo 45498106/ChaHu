@@ -520,6 +520,9 @@
     "jiangAudio": {
       "__uuid__": "12ebe86f-82ce-4c50-b5e0-0226ccd6a0e5"
     },
+    "chiAudio": {
+      "__uuid__": "b328ce55-95fa-4d53-b5ab-22b01cb8dde8"
+    },
     "niuAudio": {
       "__uuid__": "b5c9e839-01e6-42bb-b5a7-70dbae4b292b"
     },
@@ -651,10 +654,10 @@
       "__uuid__": "be4cd394-276f-4e5a-a7a8-b9477e7be437"
     },
     "home": {
-      "__uuid__": "7de8e58c-acbc-4261-94a3-3905f95aac29"
+      "__uuid__": "3d94a502-df9c-44a4-8bd2-ce71cae0fe7f"
     },
     "game": {
-      "__uuid__": "3d94a502-df9c-44a4-8bd2-ce71cae0fe7f"
+      "__uuid__": "7de8e58c-acbc-4261-94a3-3905f95aac29"
     },
     "_bgmVolume": 1,
     "_sfxVolume": 1
@@ -1074,8 +1077,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 0,
-      "height": 0
+      "width": 520,
+      "height": 120
     },
     "_rotationX": 0,
     "_rotationY": 0,

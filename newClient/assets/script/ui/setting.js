@@ -54,11 +54,11 @@ var Setting = cc.Class({
         if (this.musicSliderBar.value__ != newProgress) {
             this.musicSliderBar.value__ = newProgress;
             
-            /*var audioMng = AudioMng();
+            var audioMng = AudioMng();
             if (audioMng) {
                 audioMng.bgmVolume = newProgress;
-                audioMng.playButton();
-            }*/
+                //audioMng.playButton();
+            }
         }
     },
     

@@ -11,6 +11,7 @@ function Player(){
     this.niuCards = null;
     this.kanCards = null;
     this.jiangCards = null;
+    this.chiCards = null;
     this.outputCards = null;
     
     
@@ -27,6 +28,7 @@ Player.prototype.Clear = function() {
     this.niuCards = null;
     this.kanCards = null;
     this.jiangCards = null;
+    this.chiCards = null;
     this.outputCards = null;
     
     this.score = 0;

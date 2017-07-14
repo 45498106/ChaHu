@@ -31,6 +31,11 @@ var AudioMng = cc.Class({
             default: null,
             url: cc.AudioClip
         },
+
+        chiAudio : {
+            default : null,
+            url: cc.AudioClip
+        },
         
         niuAudio: {
             default: null,
@@ -207,6 +212,10 @@ var AudioMng = cc.Class({
     
     playJiang : function() {
         this._playSFX(this.jiangAudio);
+    },
+
+    playChi : function() {
+        this._playSFX(this.chiAudio);
     },
     
     playNiu : function() {
