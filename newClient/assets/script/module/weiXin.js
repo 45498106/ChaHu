@@ -299,10 +299,13 @@ WebWeiXin.prototype.InviteFriend = function() {
                 rule += " 庄闲算分"
             }
             if ((GameData.userRoomData.ruleId & 2) === 2) {
-                rule += " 砸头子"
+                rule += " 砸头"
             }
-            if ((GameData.userRoomData.ruleId & 4) === 4 ) {
-                rule += " 有牛"
+            if ((GameData.userRoomData.ruleId & 4) === 4) {
+                rule += " 牛"
+            }
+            if ((GameData.userRoomData.ruleId & 8) === 8) {
+                rule += " 吃"
             }
             var quan = (GameData.userRoomData.quanId === 1) ? 1 : 4;
             var hundi = GameData.userRoomData.hunCount;
