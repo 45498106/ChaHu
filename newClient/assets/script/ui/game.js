@@ -185,6 +185,7 @@ cc.Class({
         zhuangLabel : cc.Label,
         jiangLabel : cc.Label,
         niuLabel : cc.Label,
+        chiLabel : cc.Label,
         roomIdLabel : cc.Label,
         
         dongDown : cc.Sprite,
@@ -511,9 +512,10 @@ cc.Class({
         var quanCount = (typeof playCount === 'undefined') ? 0 : (Math.floor(playCount / 4) + 1);
         this.quanLabel.string = quanCount + "/" + quan + "圈";
         this.hunLabel.string = "荤低:" + GameData.userRoomData.hunCount;
-        this.zhuangLabel.node.color = (GameData.userRoomData.ruleId & 1) === 1 ? enableColor : disableColor;
-        this.jiangLabel.node.color = (GameData.userRoomData.ruleId & 4) === 4 ? enableColor : disableColor;
-        this.niuLabel.node.color = (GameData.userRoomData.ruleId & 2) === 2 ? enableColor : disableColor;
+        this.zhuangLabel.node.active = (GameData.userRoomData.ruleId & 1) === 1 ? true : false;
+        this.jiangLabel.node.active = (GameData.userRoomData.ruleId & 4) === 4 ? true : false;
+        this.niuLabel.node.active = (GameData.userRoomData.ruleId & 2) === 2 ? true : false;
+        this.chiLabel.node.active = (GameData.userRoomData.ruleId & 8) === 8 ? true : false;
         this.roomIdLabel.string = "房间:" + GameData.userRoomData.id;
     },
     
@@ -1393,7 +1395,7 @@ cc.Class({
             var tempCards = player.cards.slice();
             var card = player.cards[cardIndex];
             Util.ArrayRemoveElemnt(tempCards, card);
-            if (player.piao === false && CanPiao(tempCards)) {
+            if (player.piao === false && CanPiao(tempCards) && player.chiCards === null) {
                 this.ShowOperat2(false, true);
                 this.SelfInitCards(tempCards, player.pengCards, player.gangCards, player.kanCards,
                                    player.niuCards, player.jiangCards, player.chiCards);

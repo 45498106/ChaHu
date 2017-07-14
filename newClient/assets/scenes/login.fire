@@ -1244,7 +1244,7 @@
     },
     "_children": [],
     "_tag": -1,
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 32
@@ -1303,7 +1303,7 @@
     "_N$file": null,
     "_isSystemFontUsed": true,
     "_spacingX": 0,
-    "_N$string": "新沂方言",
+    "_N$string": "郯城方言",
     "_N$horizontalAlign": 1,
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Arial",
@@ -1430,7 +1430,7 @@
     },
     "_children": [],
     "_tag": -1,
-    "_active": false,
+    "_active": true,
     "_components": [
       {
         "__id__": 36
@@ -1585,7 +1585,7 @@
         "__id__": 40
       }
     ],
-    "_N$isChecked": false
+    "_N$isChecked": true
   },
   {
     "__type__": "cc.ToggleGroup",
@@ -1619,7 +1619,7 @@
       }
     ],
     "_tag": -1,
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 46
@@ -3777,8 +3777,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 479,
-      "height": 164
+      "width": 476,
+      "height": 154
     },
     "_rotationX": 0,
     "_rotationY": 0,

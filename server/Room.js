@@ -96,7 +96,7 @@ Room.prototype.Init = function(id, createUserId, ruleId, quanId, hunCount, playC
     me.id = id;
     me.roomName = "room:"+me.id;
     me.createUserId = createUserId;
-    me.ruleId = ruleId | enum_Rule_Chi;     // 郯城麻将可以吃
+    me.ruleId = ruleId;
     me.quanId = quanId;
     me.hunCount = hunCount;
     me.playCount = playCount;
@@ -159,7 +159,7 @@ Room.prototype.IsFullQuan = function() {
     var me = this;
     if (me.quanId === 1) {
         // 1圈,4次轮庄.
-        if (me.bankerCount >= 1) {
+        if (me.bankerCount >= 4) {
             return true;
         }
     }
@@ -862,8 +862,8 @@ Room.prototype.NewGame = function()
         me.costMoney = 1;
     }
     
-    me.RandomCards();
-    //me.FixCards();
+    //me.RandomCards();
+    me.FixCards();
     
     var roomInfo = {
         "bankerPlace" : me.bankerPlace,

@@ -94,6 +94,11 @@ Player.prototype.CanPiao = function() {
         return false;
     }
 
+    if (this.data.chiCards.length > 0) {
+        // 吃了.不能飘牌.
+        return false;
+    }
+
     if (this.data.cards.length === 1){
         return true;
     }
@@ -263,7 +268,7 @@ Player.prototype.GangCards = function(card, selfGang) {
             if (selfGang) {
                 this.data.score += 20;
             } else {
-                this.data.score += 18;
+                this.data.score += 10;
             }
         }else {
             if (selfGang) {

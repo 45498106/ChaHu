@@ -15,6 +15,7 @@ cc.Class({
         zhuang : cc.Label,
         zatouzi : cc.Label,
         niu : cc.Label,
+        chi : cc.Label,
         
         heads : {
             default : [],
@@ -43,9 +44,10 @@ cc.Class({
         var quanCount = (typeof playCount === 'undefined') ? 0 : (Math.floor(playCount / 4) + 1);
         this.quan.string = quanCount + "/" + quan + "圈";
         this.hunCount.string = "荤低:" + GameData.userRoomData.hunCount;
-        this.zhuang.node.color = (GameData.userRoomData.ruleId & 1) === 1 ? enableColor : disableColor;
-        this.zatouzi.node.color = (GameData.userRoomData.ruleId & 4) === 4 ? enableColor : disableColor;
-        this.niu.node.color = (GameData.userRoomData.ruleId & 2) === 2 ? enableColor : disableColor;
+        this.zhuang.node.active = (GameData.userRoomData.ruleId & 1) === 1 ? true : false;
+        this.zatouzi.node.active = (GameData.userRoomData.ruleId & 4) === 4 ? true : false;
+        this.niu.node.active = (GameData.userRoomData.ruleId & 2) === 2 ? true : false;
+        this.chi.node.active = (GameData.userRoomData.ruleId & 8) === 8 ? true : false;
         this.roomId.string = "房间:" + GameData.userRoomData.id;
         
         var player;

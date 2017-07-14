@@ -228,7 +228,7 @@ GameServer.prototype.NewClient = function(client)
         
         var player = client.player;
         var userId = player.id;
-        var ruleId = data.ruleId & 0x7;
+        var ruleId = data.ruleId;
         var quanId = data.quanId;
         var hunCount = data.hunCount;
         var version = data.version;

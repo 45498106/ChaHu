@@ -327,6 +327,13 @@ function GetJiangHuCards(handCards, huCards) {
 function GetChiCards(handCards, throwCard) {
     var cards = handCards;
     var card = throwCard;
+    var chiCards = new Array();
+
+    if (card >= 45 && card <= 47) {
+        // 中,发,白不能吃
+        return chiCards;
+    }
+
     var count = 0;
     var array = [0,0,0,0];
     for (var i = 0; i < cards.length; ++i) {
@@ -341,7 +348,6 @@ function GetChiCards(handCards, throwCard) {
         }
     }
 
-    var chiCards = new Array();
     if (array[0] > 0 && array[1] > 0) {
         chiCards.push(new Array(card - 2, card - 1, card));
     }
