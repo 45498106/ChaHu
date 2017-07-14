@@ -37,7 +37,7 @@ SocketProxy.prototype.Init = function() {
                             
                             }
                             else {
-                                console.log(message, typeof message);
+                                // console.log(message, typeof message);
                             }
                             var obj = JSON.parse(message);
                             if (typeof obj.event === 'string' && typeof self.interest[obj.event] === 'function'){
@@ -66,7 +66,7 @@ SocketProxy.prototype.join = function(roomName) {
             this.mng.rooms[roomName] = new Array();
         }
         this.mng.rooms[roomName].push(this);
-        console.log('join' + roomName);
+        // console.log('join ' + roomName);
     }else {
         console.log('roonName mu be string type');
     }
@@ -79,7 +79,7 @@ SocketProxy.prototype.leave = function(roomName) {
             var index = room.indexOf(this);
             if (index > -1) {
                 room.splice(index, 1);
-                console.log('leave' + roomName);
+                // console.log('leave ' + roomName);
             }
         }
     }else {

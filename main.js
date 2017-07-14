@@ -14,6 +14,14 @@ GameLog = require('./common/Logger.js');
 GameServer = new (require('./server/GameServer.js'))();
 GameServer.Init();
 
+var COS = require('cos-nodejs-sdk-v5');
+// 创建实例
+QcloudCos = new COS({
+    AppId: '1253106522',
+    SecretId: 'AKIDOhojR1P6LUWWP6Nv56uZ2JOGuLclYfVB',
+    SecretKey: 'e8PTKyRhtypgOwOfmjVAh2CAvUsgOvLZ',
+});
+
 // 设置客户端根目录
 app.use(express.static(__dirname + "/client"));
 // 监听端口
