@@ -213,6 +213,8 @@ cc.Class({
         
         voiceMonitor : cc.Node,
         voiceVolumeSpr : cc.Sprite,
+
+        sceneName : cc.String,
     },
 
     // use this for initialization
@@ -220,7 +222,7 @@ cc.Class({
         this.playingPnl.active = false;
         this.preparePnl.active = false;
         
-        this.exitRoomBtn.node.on('click', this.OnExitRoom, this);
+        //this.exitRoomBtn.node.on('click', this.OnExitRoom, this);
         this.settingBtn.node.on('click', this.OnSetting, this);
         this.shortWordBtn.node.on('click', this.OnShortWord, this);
         //this.voiceBtn.node.on('click', this.OnVoice, this);
@@ -269,6 +271,7 @@ cc.Class({
         
         GameEvent().OnEvent("reconnectedServer", this.OnReconnectedServer, this);
         GameEvent().OnEvent("ReconnectBack", this.OnReconnectBack, this);
+        GameEvent().OnEvent('ExitRoom', this.OnExitRoom, this);
         
         // 播放声音
         var audioMng = AudioMng();
@@ -938,7 +941,7 @@ cc.Class({
     },
     
     OnSetting : function() {
-        window.OpenSetting();
+        window.OpenSetting(true,this.sceneName);
     },
     
     OnShortWord : function() {

@@ -7,6 +7,10 @@ var Setting = cc.Class({
         
         soundSliderBar : cc.Slider,
         soundProgressBar : cc.ProgressBar,
+
+        exitBtn : cc.Button,
+
+        _scenenid : null,
     },
     
     statics: {
@@ -29,12 +33,37 @@ var Setting = cc.Class({
             this.soundSliderBar.progress = sfxVolume;
             this.soundProgressBar.progress = sfxVolume;
         }
+
+        //注册BT点击事件
+        this.exitBtn.node.on('click',this.callback,this);
+
+    },
+
+    callback:function(event)
+    {
+        var label = this.exitBtn.node.getChildByName('Label').getComponent(cc.Label);
+        label.string = this._scenenid;
+        var sceneid = this._scenenid;
+        if (sceneid === 'home') {
+            GameSocket().Disconnect();
+            cc.director.loadScene('login');
+        }else if (sceneid === 'game') {
+            GameEvent().SendEvent('ExitRoom');
+        }
+        this.OnHide();
     },
     
-    
-    OnShow : function() {
+    OnShow : function(sceneid) {
         this.node.active = true;
         this.node.zIndex = 999;
+
+        var label = this.exitBtn.node.getChildByName('Label').getComponent(cc.Label);
+        this._scenenid = sceneid;       
+        if (sceneid === 'home') {
+            label.string = "返回登录";
+        }else if (sceneid === 'game') {
+            label.string = "返回大厅";
+        }
     },
     
     OnHide : function() {

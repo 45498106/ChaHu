@@ -65,7 +65,7 @@ SocketProxy.prototype.on = function(event, func) {
 }
 
 SocketProxy.prototype.disconnect = function() {
-    this.ws.terminate();
+    this.ws.close();
 }
 
 SocketProxy.prototype.emit = function(event, data) {
@@ -92,6 +92,7 @@ Socket.prototype.Init = function() {
     this.socket = null;
     this.pingInterval = 0;
     this.firstConnected = true;
+    this.manualDisconnect = false;  // 主动断开链接
 }
     
 Socket.prototype.Connect =  function (address, port, router) 
@@ -103,6 +104,8 @@ Socket.prototype.Connect =  function (address, port, router)
     self.address = address;
     self.port = port;
     self.router = router;
+
+    self.manualDisconnect = false;
     
     try {
         
@@ -147,22 +150,27 @@ Socket.prototype.Connect =  function (address, port, router)
         });
 
         socket.on('disconnect', function() {
+            GameEvent().SendEvent('disconnectedServer');
+            GameLog("你已和服务器断开链接.");
+            var connected = self.connected;
+            self.connected = false;
+
+            if (self.manualDisconnect === true) {
+                return; // 如果手动断开，不尝试重新连接服务器
+            }
+
             if (self.firstConnected === false || self.doReconnect) {
                 Notify().Play("与服务器断开链接,努力重连接中!", true);
             }else {
                 Notify().Play("请检查网络链接状态!", true);
             }
-            var connected = self.connected;
-            self.connected = false;
-            GameEvent().SendEvent('disconnectedServer');
-            GameLog("你已和服务器断开链接.");
+
             if (heartbeatHandler) {
                 clearInterval(heartbeatHandler);
                 heartbeatHandler = null;
             }
-            //if (connected) {
-                self.Reconnect();
-            //}
+
+            self.Reconnect();         
         });
         
         socket.on('error', function(event) {
@@ -187,6 +195,12 @@ Socket.prototype.Reconnect = function() {
     
 Socket.prototype.IsConnected = function() {
     return this.connected;
+}
+
+Socket.prototype.Disconnect = function() {
+    this.manualDisconnect = true;
+    this.firstConnected = true;
+    this.socket.disconnect();
 }
     
 Socket.prototype.OnReceiveMessage = function (e) {

@@ -22,6 +22,8 @@ cc.Class({
         idLabel : cc.Label,
         cardLabel : cc.Label,
         headSprite : cc.Sprite,
+
+        sceneName : cc.String,
     },
 
     // use this for initialization
@@ -96,7 +98,7 @@ cc.Class({
     },
     
     OnSetting : function() {
-        window.OpenSetting();
+        window.OpenSetting(true, this.sceneName);
     },
     
     OnAddGold : function() {

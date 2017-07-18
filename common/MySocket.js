@@ -129,7 +129,8 @@ MySocket.prototype.emit = function(event, data) {
     aWss.clients.forEach(function (socket) {
         var pack = { event : event };
         if (typeof data !== 'undefined' && data !== null) pack.data = data;
-        socket.send(JSON.stringify(pack));
+        if (socket.readyState === socket.OPEN)
+            socket.send(JSON.stringify(pack));
     });
 }
 
