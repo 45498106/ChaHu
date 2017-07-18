@@ -26,7 +26,7 @@ var Config = {
     
     branchB : { // beta正式分支
         loginMenu : ['weixin'],
-        homeButtons : ['share', 'rule', 'record', 'setting', 'money', 'notify'],
+        homeButtons : ['rule', 'setting', 'money', 'notify'],
         createRoomAutoInviteRobot : false,
     },
     
@@ -43,7 +43,8 @@ var Config = {
             return this.branchC;
         }
         
-        var branchB_mapArray = ['1.0','web1.0','webMobile1.0','ios1.0','android1.0'];
+        var branchB_mapArray = ['1.0','web1.0','webMobile1.0','ios1.0','android1.0', 
+                                '1.1','web1.1','webMobile1.1','ios1.1','android1.1'];
         var inBranchB = (branchB_mapArray.indexOf(varsion) >= 0);
         if (inBranchB) {
             return this.branchB;
