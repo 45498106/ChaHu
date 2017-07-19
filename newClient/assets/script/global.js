@@ -1,8 +1,8 @@
-window.GameHost = "chahu.h5ii.com";
+window.GameHost = "192.168.1.222";
 window.GamePort = 18080;
 window.LogHost = "chahu.h5ii.com";
 window.LogPort = 38086;
-window.GameVersion = "1.1";
+window.GameVersion = "1.2";
 
 
 if (cc.sys.isNative) {
@@ -79,12 +79,12 @@ window.Notify = function() {
     return notify.inst;
 }
 
-window.OpenSetting = function(open) {
+window.OpenSetting = function(open,senceid) {
     var setting = require("setting")
     if (typeof open === 'boolean' && !open) {
         setting.inst.OnHide();
     }else {
-        setting.inst.OnShow();
+        setting.inst.OnShow(senceid);
     }
 }
 

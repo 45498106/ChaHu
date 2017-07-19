@@ -11703,6 +11703,7 @@
     },
     "headSprite": {
       "__id__": 49
-    }
+    },
+    "sceneName": "home"
   }
 ]

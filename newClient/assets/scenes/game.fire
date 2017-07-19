@@ -670,7 +670,8 @@
     },
     "voiceVolumeSpr": {
       "__id__": 1167
-    }
+    },
+    "sceneName": "game"
   },
   {
     "__type__": "cc.Node",

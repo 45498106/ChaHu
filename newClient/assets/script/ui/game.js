@@ -271,7 +271,7 @@ cc.Class({
         
         GameEvent().OnEvent("reconnectedServer", this.OnReconnectedServer, this);
         GameEvent().OnEvent("ReconnectBack", this.OnReconnectBack, this);
-        GameEvent().OnEvent('ExitRoom', this.OnExitRoom, this);
+        GameEvent().OnEvent('AutoExitRoom', this.OnExitRoom, this);
         
         // 播放声音
         var audioMng = AudioMng();
@@ -878,7 +878,7 @@ cc.Class({
             this.ExitRoom();
         }
         else {
-            if (GameData.userRoomData.playConnt > 0 || GameData.userRoomData.played === 1) {
+            if (GameData.userRoomData.playCount > 0 || GameData.userRoomData.played === 1) {
                 this.destoryRoomPnl.getComponent('destoryRoom').OnShow(true);
             }
             else {

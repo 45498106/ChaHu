@@ -48,7 +48,7 @@ var Setting = cc.Class({
             GameSocket().Disconnect();
             cc.director.loadScene('login');
         }else if (sceneid === 'game') {
-            GameEvent().SendEvent('ExitRoom');
+            GameEvent().SendEvent('AutoExitRoom');
         }
         this.OnHide();
     },
