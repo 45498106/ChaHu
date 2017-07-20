@@ -3,6 +3,8 @@
  * Module exports.
  */
 
+ var WebSocket = require('ws');
+
 if(typeof module !== 'undefined')
     module.exports = MySocket;
 
@@ -95,7 +97,7 @@ SocketProxy.prototype.disconnect = function() {
 SocketProxy.prototype.emit = function(event, data) {
     var pack = { event : event };
     if (typeof data !== 'undefined' && data !== null) pack.data = data;
-    if (this.ws.readyState === ws.OPEN)
+    if (this.ws.readyState === WebSocket.OPEN)
         this.ws.send(JSON.stringify(pack));
 }
 
@@ -130,7 +132,7 @@ MySocket.prototype.emit = function(event, data) {
     aWss.clients.forEach(function (socket) {
         var pack = { event : event };
         if (typeof data !== 'undefined' && data !== null) pack.data = data;
-        if (socket.readyState === socket.OPEN)
+        if (socket.readyState === WebSocket.OPEN)
             socket.send(JSON.stringify(pack));
     });
 }
