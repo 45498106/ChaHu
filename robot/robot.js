@@ -271,6 +271,21 @@ function Register(socket) {
             socket.player.place = msg.place;
         }
     });
+
+    socket.on('playerOffline', function(msg) {
+        // 玩家掉线
+        if (socket.needThrowCard === true && socket.timeHandler !== null) {
+            clearTimeout(socket.timeHandler);
+            socket.timeHandler = null;
+        }
+    });
+
+    socket.on('playerReconnection', function(msg) {
+        // 玩家重新链接进来
+        if (socket.needThrowCard === true) {
+            socket.timeHandler = setTimeout(socket.throwCardFunc, 1000);
+        }
+    });
     
     socket.on('initCards', function(msg) {
         //GameLog("initCards", msg);
@@ -287,11 +302,15 @@ function Register(socket) {
         if (place === socket.player.place) {
             PassOperation(socket, msg);
             socket.player.cards.push(card);
-            setTimeout(function(socket, card){
+            socket.needThrowCard = true;
+            socket.throwCardFunc = function(socket, card){
                 return function() {
                      socket.emit('needThrowCard', { card : card});
+                     socket.needThrowCard = false;
                 }
-            }(socket, card), 1000);
+
+            }(socket, card);
+            socket.timeHandler = setTimeout(socket.throwCardFunc, 1000);
         }
     });
     

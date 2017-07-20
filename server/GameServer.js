@@ -91,7 +91,7 @@ GameServer.prototype.NewClient = function(client)
     PROCESS_COCOS_SOCKETIO(socket, 'enterGame', function (data) {
         // 登录游戏
         if (typeof client.player !== 'undefined') {
-            GameLog(socket.id + "repeat enterGame");
+            GameLog(socket.ws._ultron.id + " repeat enterGame");
             return;
         }
         
@@ -396,7 +396,8 @@ GameServer.prototype.JoinRoom = function(player, roomId)
             
             var roomData = JSON.parse(dbData.roomData);
             if (typeof roomData.id === 'number' &&
-                roomData.id === roomId) {
+                roomData.id === roomId && 
+                roomData.ownerId === userId) {
                 
                 var ownerId = roomData.ownerId;
                 var ruleId = roomData.ruleId;
@@ -422,6 +423,8 @@ GameServer.prototype.JoinRoom = function(player, roomId)
             }
             else {
                 player.socket.emit("gameError", { msg : "房间不存在!"});
+                GameDB.UpdateRoomData(userId, {});
+                GameLog("清空玩家数据记录");
                 return;
             }
         });

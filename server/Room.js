@@ -337,13 +337,20 @@ Room.prototype.AddPlayer = function(player)
     PROCESS_COCOS_SOCKETIO(player.socket, 'reqDestoryRoom', function (data) {
         // GameLog('reqDestoryRoom');
         
-        if (me.started === false) {
+        if (me.started === false && me.playCount <=0) {
             GameLog("游戏已经未开始,不用发起总结算");
             return;
         }
-        
+
         if (typeof player.room === 'undefined') {
             GameLog("没有加入房间");
+            return;
+        }
+
+        if (player.id === me.createUserId && me.started === false && me.playCount > 0) {
+            // 如果玩家是创建者，并且游戏中无其他玩家
+            me.BroadcastPlayers(null, "exitRoomBack", player.id);
+            me.Shutdown();
             return;
         }
         
@@ -816,7 +823,7 @@ Room.prototype.FixCards = function() {
         }
     }
     
-    var fixCards = [11,11,11,12,13,14,15,16,17,18,19,19,19,34,26,45,46,47,26,27,28,28,28];
+    var fixCards = [32,32,32,12,13,14,15,16,17,18,45,46,47,21,22,23,24,25,26,27,28,28,28];
     var t;
     for (var i = 0; i < fixCards.length; ++i) {
         for (var j = i; j < this.cards.length; ++j) {
