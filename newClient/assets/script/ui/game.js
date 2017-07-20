@@ -112,7 +112,6 @@ cc.Class({
         
         preRoomIdLabel : cc.Label,
         
-        exitRoomBtn : cc.Button,
         settingBtn : cc.Button,
         shortWordBtn : cc.Button,
         voiceBtn : cc.Button,
@@ -225,8 +224,7 @@ cc.Class({
     onLoad: function () {
         this.playingPnl.active = false;
         this.preparePnl.active = false;
-        
-        //this.exitRoomBtn.node.on('click', this.OnExitRoom, this);
+
         this.settingBtn.node.on('click', this.OnSetting, this);
         this.shortWordBtn.node.on('click', this.OnShortWord, this);
         //this.voiceBtn.node.on('click', this.OnVoice, this);
