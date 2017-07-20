@@ -52,7 +52,8 @@ cc.Class({
         GameEvent().OnEvent("CreateRoomSuccess", this.OnCreateRoomSuccess, this);
         GameEvent().OnEvent("JoinRoomSuccess", this.OnJoinRoomSucces, this);
         GameEvent().OnEvent("reconnectedServer", this.OnReconnectedServer, this);
-        
+        GameEvent().OnEvent('SettingButtonShow', this.OnSettingButtonShow, this);
+
         // 播放声音
         var audioMng = AudioMng();
         if (audioMng) audioMng.playHomeMusic();
@@ -183,6 +184,10 @@ cc.Class({
         }
     },
     
+    OnSettingButtonShow : function(event) {
+        var func = event.detail;
+        func("outLogin_1","outLogin_2","outLogin_1","outLogin_2");
+    }
 
     // called every frame, uncomment this function to activate update callback
     // update: function (dt) {

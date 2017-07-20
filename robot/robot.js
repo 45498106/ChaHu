@@ -74,7 +74,7 @@ SocketProxy.prototype.on = function(event, func) {
 }
 
 SocketProxy.prototype.disconnect = function() {
-    this.ws.close();
+    this.ws.terminate();
 }
 
 SocketProxy.prototype.emit = function(event, data) {

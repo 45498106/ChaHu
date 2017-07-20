@@ -1,4 +1,4 @@
-window.GameHost = "192.168.1.222";
+window.GameHost = "localhost";
 window.GamePort = 18080;
 window.LogHost = "chahu.h5ii.com";
 window.LogPort = 38086;
@@ -191,6 +191,47 @@ window.SetSpriteImage = function(sprite, url, localRes) {
                 }
             }(nowTime, sprite));
         // }
+    }
+}
+
+window.SetButtonImages = function(button, normalUrl, pressedUrl, hoverUrl, disableUrl) {
+    var nowTime = new Date();
+    button.lastSetSpriteImageTime = nowTime;
+
+    if (typeof normalUrl === 'string') {
+        cc.loader.loadRes(normalUrl, cc.SpriteFrame, function(nowTime, sprite) {
+            return function (err, spriteFrame) {
+                if (button.lastSetSpriteImageTime > nowTime) { return }
+                button.normalSprite = spriteFrame;
+            }
+        }(nowTime, button));
+    }
+
+    if (typeof pressedUrl === 'string') {
+        cc.loader.loadRes(pressedUrl, cc.SpriteFrame, function(nowTime, sprite) {
+            return function (err, spriteFrame) {
+                if (button.lastSetSpriteImageTime > nowTime) { return }
+                button.pressedSprite = spriteFrame;
+            }
+        }(nowTime, button));
+    }
+
+    if (typeof hoverUrl === 'string') {
+        cc.loader.loadRes(hoverUrl, cc.SpriteFrame, function(nowTime, sprite) {
+            return function (err, spriteFrame) {
+                if (button.lastSetSpriteImageTime > nowTime) { return }
+                button.hoverSprite = spriteFrame;
+            }
+        }(nowTime, button));
+    }
+
+    if (typeof disableUrl === 'string') {
+        cc.loader.loadRes(disableUrl, cc.SpriteFrame, function(nowTime, sprite) {
+            return function (err, spriteFrame) {
+                if (button.lastSetSpriteImageTime > nowTime) { return }
+                button.disabledSprite = spriteFrame;
+            }
+        }(nowTime, button));
     }
 }
 

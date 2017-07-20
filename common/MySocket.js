@@ -91,7 +91,7 @@ SocketProxy.prototype.leave = function(roomName) {
 
 
 SocketProxy.prototype.disconnect = function() {
-    this.ws.close();
+    this.ws.terminate();
 }
 
 SocketProxy.prototype.emit = function(event, data) {

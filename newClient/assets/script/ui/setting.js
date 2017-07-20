@@ -41,8 +41,6 @@ var Setting = cc.Class({
 
     callback:function(event)
     {
-        var label = this.exitBtn.node.getChildByName('Label').getComponent(cc.Label);
-        label.string = this._scenenid;
         var sceneid = this._scenenid;
         if (sceneid === 'home') {
             GameSocket().Disconnect();
@@ -57,13 +55,12 @@ var Setting = cc.Class({
         this.node.active = true;
         this.node.zIndex = 999;
 
-        var label = this.exitBtn.node.getChildByName('Label').getComponent(cc.Label);
         this._scenenid = sceneid;       
-        if (sceneid === 'home') {
-            label.string = "返回登录";
-        }else if (sceneid === 'game') {
-            label.string = "返回大厅";
-        }
+        GameEvent().SendEvent('SettingButtonShow',  function(exitBtn) {
+            return function(normalUrl, pressedUrl, hoverUrl, disableUrl){
+                SetButtonImages(exitBtn, normalUrl, pressedUrl, hoverUrl, disableUrl);
+            }
+        }(this.exitBtn));
     },
     
     OnHide : function() {
