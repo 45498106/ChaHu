@@ -73,20 +73,18 @@ SocketProxy.prototype.on = function(event, func) {
 }
 
 SocketProxy.prototype.disconnect = function() {
-    this.ws.close();
+    this.ws.terminate();
 }
 
 SocketProxy.prototype.emit = function(event, data) {
     var pack = { event : event };
     if (typeof data !== 'undefined' && data !== null) pack.data = data;
-    if (this.ws.readyState === ws.OPEN)
-        this.ws.send(JSON.stringify(pack));
+    this.ws.send(JSON.stringify(pack));
 }
 
 SocketProxy.prototype.send = function(event) {
     if (typeof event === 'string') {
-        if (this.ws.readyState === ws.OPEN)
-            this.ws.send(event);
+        this.ws.send(event);
     }
 }
 

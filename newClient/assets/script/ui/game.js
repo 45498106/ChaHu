@@ -133,18 +133,22 @@ cc.Class({
         gangPrefab : cc.Prefab,
         pengPrefab : cc.Prefab,
         jiangPrefab : cc.Prefab,
+        niuPrefab : cc.Prefab,
         
         frontGangPrefab : cc.Prefab,
         frontPengPrefab : cc.Prefab,
         frontJiangPrefab : cc.Prefab,
+        frontNiuPrefab : cc.Prefab,
         
         backGangPrefab : cc.Prefab,
         backPengPrefab : cc.Prefab,
         backJiangPrefab : cc.Prefab,
+        backNiuPrefab : cc.Prefab,
         
         upGangPrefab : cc.Prefab,
         upPengPrefab : cc.Prefab,
         upJiangPrefab : cc.Prefab,
+        upNiuPrefab : cc.Prefab,
         
         selfHand : cc.Node,
         selfOutput : cc.Node,
@@ -272,6 +276,7 @@ cc.Class({
         GameEvent().OnEvent("reconnectedServer", this.OnReconnectedServer, this);
         GameEvent().OnEvent("ReconnectBack", this.OnReconnectBack, this);
         GameEvent().OnEvent('AutoExitRoom', this.OnExitRoom, this);
+        GameEvent().OnEvent('SettingButtonShow', this.OnSettingButtonShow, this);
         
         // 播放声音
         var audioMng = AudioMng();
@@ -883,6 +888,21 @@ cc.Class({
             }
             else {
                 GameSocket().Send("exitRoom");
+            }
+        }
+    },
+
+    OnSettingButtonShow : function(event) {
+        var func = event.detail;
+        if (GameData.gameEnd === true) {
+            func("returelob_1", "returelob_2", "returelob_1", "returelob_2");
+        }
+        else {
+            if (GameData.userRoomData.playCount > 0 || GameData.userRoomData.played === 1) {
+                func("settlement_1", "settlement_2", "settlement_1", "settlement_2");
+            }
+            else {
+                func("returelob_1", "returelob_2", "returelob_1", "returelob_2");
             }
         }
     },
@@ -1528,20 +1548,57 @@ cc.Class({
     },
     
     InitSpecialCards : function(hand, cardDir, gapPrefab, pengPrefab, gangPrefab,
-        jiangPrefab, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) 
+        jiangPrefab, niuPrefab, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) 
     {
         var k,c;
         for (k = 0; niuCards && k < niuCards.length; k+=3) {
-            var inst = cc.instantiate(pengPrefab);
+            var inst = cc.instantiate(niuPrefab);
             var children = inst.children;
+
+            //牛--中发白数量
+            var niuNum = [0,0,0];
+            for (c = 0; c < niuCards.length; c++) {
+                if (niuCards[c] == 45) 
+                    ++niuNum[0];
+                else if (niuCards[c] == 46) 
+                    ++niuNum[1];
+                else if (niuCards[c] == 47) 
+                    ++niuNum[2];
+            }
+
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
-                spr.spriteFrame = CardSpriteFrameCache[cardDir][45+c];;
+                //设置牛的数量
+                //中
+                var niuzhongNum = children[0].getComponent(cc.Sprite).node.getChildByName('numLabel').getComponent(cc.Label);
+                niuzhongNum.node.active = false;
+                if(niuNum[0] !== 1){
+                    niuzhongNum.node.active = true;
+                    var testNum = "x" + niuNum[0].toString();
+                    niuzhongNum.string = testNum;
+                }
+                //发
+                var niufaNum = children[1].getComponent(cc.Sprite).node.getChildByName('numLabel').getComponent(cc.Label);
+                niufaNum.node.active = false;
+                if(niuNum[1] !== 1){
+                    niufaNum.node.active = true;
+                    var testNum = "x" + niuNum[1].toString();
+                    niufaNum.string = testNum;
+                }
+                //白
+                var niubaiNum = children[2].getComponent(cc.Sprite).node.getChildByName('numLabel').getComponent(cc.Label);
+                niubaiNum.node.active = false;
+                if(niuNum[2] !== 1){
+                    niubaiNum.node.active = true;
+                    var testNum = "x" + niuNum[2].toString();
+                    niubaiNum.string = testNum;
+                }
+                spr.spriteFrame = CardSpriteFrameCache[cardDir][45+c];
             }
             
             hand.addChild(inst);
             hand.addChild(cc.instantiate(gapPrefab));
-            k+=13;
+            break;
         }
         
         for (k = 0; gangCards && k < gangCards.length; k+=4) {
@@ -1607,14 +1664,53 @@ cc.Class({
     },
     
     InitSpecialCardsForBack : function(hand, cardDir, gapPrefab, pengPrefab, gangPrefab,
-        jiangPrefab, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) 
+        jiangPrefab, niuPrefab, pengCards, gangCards, kanCards, niuCards, jiangCards, chiCards) 
     {
         var k,c;
         for (k = 0; niuCards && k < niuCards.length; k+=3) {
-            var inst = cc.instantiate(pengPrefab);
+            var inst = cc.instantiate(niuPrefab);
             var children = inst.children;
+
+            //牛--中发白数量
+            var niuNum = [0,0,0];
+            for (c = 0; c < niuCards.length; c++) {
+                if (niuCards[c] == 45) 
+                    ++niuNum[0];
+                else if (niuCards[c] == 46) 
+                    ++niuNum[1];
+                else if (niuCards[c] == 47) 
+                    ++niuNum[2];
+            }
+
             for (c = 0; c < children.length; c++) {
                 var spr = children[c].getComponent(cc.Sprite);
+
+                //设置牛的数量
+                //中
+                var niuzhongNum = children[0].getComponent(cc.Sprite).node.getChildByName('numLabel').getComponent(cc.Label);
+                niuzhongNum.node.active = false;
+                if(niuNum[0] !== 1){
+                    niuzhongNum.node.active = true;
+                    var testNum = "x" + niuNum[0].toString();
+                    niuzhongNum.string = testNum;
+                }
+                //发
+                var niufaNum = children[1].getComponent(cc.Sprite).node.getChildByName('numLabel').getComponent(cc.Label);
+                niufaNum.node.active = false;
+                if(niuNum[1] !== 1){
+                    niufaNum.node.active = true;
+                    var testNum = "x" + niuNum[1].toString();
+                    niufaNum.string = testNum;
+                }
+                //白
+                var niubaiNum = children[2].getComponent(cc.Sprite).node.getChildByName('numLabel').getComponent(cc.Label);
+                niubaiNum.node.active = false;
+                if(niuNum[2] !== 1){
+                    niubaiNum.node.active = true;
+                    var testNum = "x" + niuNum[2].toString();
+                    niubaiNum.string = testNum;
+                }
+
                 spr.spriteFrame = CardSpriteFrameCache[cardDir][45+c];
             }
             
@@ -1757,7 +1853,7 @@ cc.Class({
         // 添加特殊牌
         this.InitSpecialCards(this.selfHand, 4, this.gap, 
                               this.pengPrefab, this.gangPrefab,
-                              this.jiangPrefab, pengCards, gangCards, 
+                              this.jiangPrefab, this.niuPrefab, pengCards, gangCards, 
                               kanCards, niuCards, jiangCards, chiCards);
         
         // 添加手牌
@@ -1820,7 +1916,7 @@ cc.Class({
         // 添加特殊牌
         this.InitSpecialCards(this.frontHand, 0, this.gap_v, 
                               this.frontPengPrefab, this.frontGangPrefab,
-                              this.frontJiangPrefab, pengCards, gangCards, 
+                              this.frontJiangPrefab, this.frontNiuPrefab, pengCards, gangCards, 
                               kanCards, niuCards, jiangCards, chiCards);
         
         if  (Replay.IsReplayMode()) {
@@ -1886,7 +1982,7 @@ cc.Class({
         // 添加特殊牌
         this.InitSpecialCardsForBack(this.backHand, 2, this.gap_v, 
                               this.backPengPrefab, this.backGangPrefab,
-                              this.backJiangPrefab, pengCards, gangCards, 
+                              this.backJiangPrefab, this.backNiuPrefab, pengCards, gangCards, 
                               kanCards, niuCards, jiangCards, chiCards);
         
         if  (Replay.IsReplayMode()) {
@@ -1952,7 +2048,7 @@ cc.Class({
         // 添加特殊牌
         this.InitSpecialCards(this.oppositeHand, 3, this.gap_u, 
                               this.upPengPrefab, this.upGangPrefab,
-                              this.upJiangPrefab, pengCards, gangCards, 
+                              this.upJiangPrefab, this.upNiuPrefab, pengCards, gangCards, 
                               kanCards, niuCards, jiangCards, chiCards);
         
         // 添加手牌

@@ -66,7 +66,7 @@ IO.on('connection', function (socket) {
 
     clients.push(client);
     
-    //IO.emit('clientJoin', { name: client.id });
+    IO.emit('clientJoin', { name: client.id });
     
     GameLog('Total client: ' + clients.length);
     

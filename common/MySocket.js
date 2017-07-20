@@ -89,14 +89,13 @@ SocketProxy.prototype.leave = function(roomName) {
 
 
 SocketProxy.prototype.disconnect = function() {
-    this.ws.close();
+    this.ws.terminate();
 }
 
 SocketProxy.prototype.emit = function(event, data) {
     var pack = { event : event };
     if (typeof data !== 'undefined' && data !== null) pack.data = data;
-    if (this.ws.readyState === ws.OPEN)
-        this.ws.send(JSON.stringify(pack));
+    this.ws.send(JSON.stringify(pack));
 }
 
 function MySocket()
