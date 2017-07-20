@@ -60,12 +60,23 @@
         this.step = 0;
     }
 
+    Replay.prototype.GetStepNum = function () {
+        if (this.replayMode) {
+            return GameData.replayData.actions.length;
+        }
+        return 0;
+    }
+
     Replay.prototype.Step = function() {
         
         if (this.firstStep) {
             this.firstStep = false;
 
             return this.InitCards();
+        }
+
+        if (this.step === GameData.replayData.actions.length) {
+            return 0;
         }
 
         var action = GameData.replayData.actions[this.step];
@@ -79,18 +90,20 @@
             card = action.data;
             player.cards.push(card);
             GameEvent().SendEvent('GetCard', {place:place, card:card});
-            return 2;
+            return 1;
         }else if (action.action === 'throwCard') {
             card = action.data;
             Util.ArrayRemoveElemnt(player.cards, card);
             player.cards.sort();
             GameEvent().SendEvent('ThrowCard', {place:place, card:card});
-            return 2;
+            return 1;
         }else if (action.action === 'huCards') {
-            //card = action.data.;
+            card = typeof action.data === 'number' ? action.data : action.data.card;
+            GameData.getCardPlace = -1;
             GameData.huPlace = place;
-            //player.cards.sort();
-            //GameEvent().SendEvent('ThrowCard', {place:action.place, card:card});
+            GameData.huCard = card;
+            GameEvent().SendEvent('HuCards', {place:action.place, card:card});
+            return 1;
         }
         
         return 1000000;
@@ -110,7 +123,8 @@
 
             GameEvent().SendEvent('InitCards', data);
         }
-        return 3.0;
+        
+        return 1;
     }
 
     Replay.prototype.End = function() {

@@ -1,6 +1,7 @@
 
 
 Util = require("./../common/Utility.js");
+const WebSocket = require('ws');
 
 function SocketProxy(ws) {
     this.interest = {};
@@ -79,18 +80,18 @@ SocketProxy.prototype.disconnect = function() {
 SocketProxy.prototype.emit = function(event, data) {
     var pack = { event : event };
     if (typeof data !== 'undefined' && data !== null) pack.data = data;
-    this.ws.send(JSON.stringify(pack));
+    if (this.ws.readyState === WebSocket.OPEN)
+        this.ws.send(JSON.stringify(pack));
 }
 
 SocketProxy.prototype.send = function(event) {
     if (typeof event === 'string') {
-        this.ws.send(event);
+        if (this.ws.readyState === WebSocket.OPEN)
+            this.ws.send(event);
     }
 }
 
 GameLog = require('./../common/Logger.js');
-
-const WebSocket = require('ws');
 
 var RobotUniqueIDs = [
     "rb8e92ac193a2d2994ef3ebaf79218d277",

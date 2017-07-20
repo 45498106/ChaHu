@@ -2172,7 +2172,7 @@ cc.Class({
         var pause = false;
         if (Replay.IsReplayMode() && !pause) {
             
-            this.replayDt += dt;
+            this.replayDt += dt * 4.0;
 
             if (this.replayDt > this.setpInterval) {
                 this.setpInterval = Replay.Step();
