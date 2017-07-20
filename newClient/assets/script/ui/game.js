@@ -877,33 +877,47 @@ cc.Class({
         if (readySpr)
             readySpr.node.active = true;
     },
-    
-    OnExitRoom : function() {
+
+
+    GetExitState : function() {
         if (GameData.gameEnd === true) {
-            this.ExitRoom();
+            return 3;
         }
         else {
             if (GameData.userRoomData.playCount > 0 || GameData.userRoomData.played === 1) {
-                this.destoryRoomPnl.getComponent('destoryRoom').OnShow(true);
+                return 2;
             }
             else {
-                GameSocket().Send("exitRoom");
+                return 1;
             }
+        }
+    },
+    
+    OnExitRoom : function() {
+        var state = this.GetExitState();
+        if (state === 3) {
+            this.ExitRoom();
+        }
+        else if(state === 2) {
+            this.destoryRoomPnl.getComponent('destoryRoom').OnShow(true);
+        }
+        else if(state === 1) {
+            GameSocket().Send("exitRoom");
         }
     },
 
     OnSettingButtonShow : function(event) {
+
         var func = event.detail;
-        if (GameData.gameEnd === true) {
+        var state = this.GetExitState();
+        if (state === 3) {
             func("returelob_1", "returelob_2", "returelob_1", "returelob_2");
         }
-        else {
-            if (GameData.userRoomData.playCount > 0 || GameData.userRoomData.played === 1) {
-                func("settlement_1", "settlement_2", "settlement_1", "settlement_2");
-            }
-            else {
-                func("returelob_1", "returelob_2", "returelob_1", "returelob_2");
-            }
+        else if(state === 2) {
+            func("settlement_1", "settlement_2", "settlement_1", "settlement_2");
+        }
+        else if(state === 1) {
+            func("returelob_1", "returelob_2", "returelob_1", "returelob_2");
         }
     },
     
